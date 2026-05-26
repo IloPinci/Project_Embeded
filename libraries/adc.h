@@ -9,6 +9,9 @@
 #define BIT10 0
 #define BIT12 1
 
+#define BATTERY 11
+#define IR 5
+
 void adc_setup();
 
 float adc_read(int sampling_mode, int conversion_mode);
