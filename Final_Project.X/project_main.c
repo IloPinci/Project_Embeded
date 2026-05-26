@@ -11,14 +11,18 @@
 #include "spi.h"
 #include "uart.h"
 #include "adc.h"
+#include "pwm.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 
-#define Max_Tasks 6
+#define Max_Tasks 8
+#define ir_threshold 30
+#define debounce_ticks 3
 
-//! Task structure definition
+//! Data structures
+// what a task should have
 typedef struct{
     int counter;
     int period;      // period = heartbeat * period_multiplier
@@ -26,23 +30,55 @@ typedef struct{
     void (*task_function) (void *);
     void * params;
 }TaskData; 
-//! Shared data structure
+
+// a finite state machine for the car
+typedef enum{
+    HALT = 0,
+    MOVE = 1,
+    AVOID = 2
+}car_state;
+
+// a data structure which is shared by the tasks
 typedef struct{
+    // ADC sensor readings
     float battery_voltage;
     float ir_distance;
-    int loop;
-    int current_state;      // 1 -> halted; 2 -> obs avoid; 3 -> moving
+
+    // IMU
     Sensor_DataStruct accel_data;
     Sensor_DataStruct mag_data;
+
+    // uart recieve
+    volatile int speed;
+    volatile int yawRate;
+
+    // handling of buttons
+    volatile int button_1_original;     // RE8
+    volatile int button_2_original;     // RE9
+    int button1_confirmed;
+    int button2_confirmed;
+
+    car_state current_car_state;
+
+    int led_toggle;
+    int adc_ready;
 }shared_data;
 
 TaskData schedInfo[Max_Tasks];
 shared_data global_system_state = {0};
 
+// here we get the buffer that is found in the uart.c so we don't have to declare it again
+extern Circular_Buffer receive_buffer;
+extern Circular_Buffer transmit_buffer;
 
+//! Setups
 void port_setup(){
     //! Disable analog inputs 
     ANSELA = ANSELB = ANSELC = ANSELD = ANSELE = ANSELG = 0x0000;
+    // enable AN5 and AN11 (the ir and the battery)
+    ANSELBbits.ANSB5  = 1;  
+    ANSELBbits.ANSB11 = 1;
+
 
     // lights
     TRISAbits.TRISA0 = 0;   // LED1 output
@@ -51,7 +87,6 @@ void port_setup(){
     TRISFbits.TRISF0 = 0;   // brakes
     TRISGbits.TRISG1 = 0;   // low intensity
     TRISAbits.TRISA7 = 0;   // high intensity 
-
 
     LATAbits.LATA0 = 1;     // LED1 on in the initial state
     LATBbits.LATB8 = 0;     
@@ -64,15 +99,47 @@ void port_setup(){
     // buttons
     TRISEbits.TRISE8 = 1;   // Button 1 input
     TRISEbits.TRISE9 = 1;   // Button 2 input
+
+    // the ISR for the buttons
+    INTCON2bits.INT1EP = 1; 
+    INTCON2bits.INT2EP = 1;
+    // clear the flags
+    IFS1bits.INT1IF = 0;
+    IFS1bits.INT2IF = 0;
+    // enable the interrupts
+    IEC1bits.INT1IE = 1;
+    IEC1bits.INT2IE = 1;
 }
-//! library setups
+
 void library_setup(){
     tmr_setup_period(TIMER1, 2);    // 500Hz -> 2ms
     uart_setup();
     spi_setup();        
-    mag_setup();            
-    adc_setup(AUTO, AUTO, BIT10, BATTERY);    // battery
+    mag_setup(); 
+    pwm_setup_all();   
+    
+    // we use scan mode so both the battery and the IR ca be read in a non blocking way
+    adc_scan_setup(BIT10);    // battery
 }
+
+
+//! Interrupts
+void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void) {
+    global_system_state.button_1_original = 1;
+    
+    // clear the flag and disable the interrupt. The disabing is done to combat bounces. The interrupt enable is activated after 200ms which should be sufficient time to allow for it
+    IFS1bits.INT1IF = 0; 
+    IEC1bits.INT1IE = 0;
+}
+
+void __attribute__((interrupt, no_auto_psv)) _INT2Interrupt(void) {
+    global_system_state.button_2_original = 1;
+    
+    // clear the flag and disable the interrupt. The disabing is done to combat bounces. The interrupt enable is activated after 200ms which should be sufficient time to allow for it
+    IFS1bits.INT2IF = 0; 
+    IEC1bits.INT2IE = 0;
+}
+
 
 //! Scheduler execution
 void scheduler_run(TaskData tasks[]){
@@ -98,14 +165,14 @@ void led_blink(void* param){
     LATAbits.LATA0 =  !LATAbits.LATA0;
 
     // halted
-    if (sd->current_state == 1){
-        LATBbits.LATB8 = !LATBbits.LATB8;   // left side    
-        LATFbits.LATF1 = !LATFbits.LATF1;   // right side
-    }
-    // ob avoid
-    else if (sd->current_state == 2){
-        LATFbits.LATF1 = !LATFbits.LATF1;
-    } 
+//    if (sd->car_state->current_car_state == 1){
+//        LATBbits.LATB8 = !LATBbits.LATB8;   // left side    
+//        LATFbits.LATF1 = !LATFbits.LATF1;   // right side
+//    }
+//    // ob avoid
+//    else if (sd->car_state->current_car_state == 2){
+//        LATFbits.LATF1 = !LATFbits.LATF1;
+//    } 
 }
 
 
@@ -123,10 +190,10 @@ void uart_sending(void* param){
     uart_transmit(buffer);
 
     // every 1 hz we transmit what we have read. We enter uart_sending every 50 loops. And we want to send the the voltage every 500 loops. So we have to send it if we enter in the uart_sending 10 times
-    if (++dat->loop % 10 == 0){
+    if (++dat->led_toggle % 10 == 0){
         sprintf(buffer, "$MBATT,%.2f*", dat->battery_voltage);
         uart_transmit(buffer);
-        dat->loop = 0;
+        dat->led_toggle = 0;
     }
 }
 
@@ -204,7 +271,7 @@ void task_setup(){
 
 
     //? Uart transmitting
-    schedInfo[5].counter = 30;
+    schedInfo[5].counter = 0;
     schedInfo[5].period = 50;
     schedInfo[5].enable = 1;
     schedInfo[5].task_function = uart_sending;
@@ -237,7 +304,7 @@ int main(void) {
     while(1){
         scheduler_run(schedInfo);
         if(tmr_wait_period(TIMER1)){
-            uart_transmit("!!!!!!!!!!!!!!!!!!!!");
+            uart_transmit("$MISS*");
         }
     }
 
