@@ -1,5 +1,5 @@
 #include "xc.h"
-#include "timer_config.h"
+#include "timer.h"
 #include "adc.h"
 
 void adc_setup(int bit_mode, int sampling_mode, int conversion_mode, int an_read){

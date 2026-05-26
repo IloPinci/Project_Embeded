@@ -7,8 +7,8 @@
       <itemPath>../libraries/adc.h</itemPath>
       <itemPath>../libraries/pwm.h</itemPath>
       <itemPath>../libraries/spi.h</itemPath>
-      <itemPath>../libraries/timer_config.h</itemPath>
       <itemPath>../libraries/uart.h</itemPath>
+      <itemPath>../libraries/timer.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -26,8 +26,8 @@
       <itemPath>../libraries/adc.c</itemPath>
       <itemPath>../libraries/pwm.c</itemPath>
       <itemPath>../libraries/spi.c</itemPath>
-      <itemPath>../libraries/timer_config.c</itemPath>
       <itemPath>../libraries/uart.c</itemPath>
+      <itemPath>../libraries/timer.c</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
@@ -192,7 +192,7 @@
       </C30-LD>
       <C30Global>
         <property key="combine-sourcefiles" value="false"/>
-        <property key="common-include-directories" value=""/>
+        <property key="common-include-directories" value="..\libraries"/>
         <property key="dual-boot-partition" value="0"/>
         <property key="fast-math" value="false"/>
         <property key="generic-16-bit" value="false"/>

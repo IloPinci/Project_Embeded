@@ -13,7 +13,7 @@
 #include "spi.h"
 #include "uart.h"  
 #include <math.h>
-#include "timer_config.h"
+#include "timer.h"
 
 #define PI  3.14159265358979323846
 
