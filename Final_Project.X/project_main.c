@@ -17,9 +17,8 @@
 #include <stdlib.h>
 
 
-#define Max_Tasks 8
+#define Max_Tasks 9
 #define ir_threshold 30
-#define debounce_ticks 3
 
 //! Data structures
 // what a task should have
@@ -57,6 +56,8 @@ typedef struct{
     volatile int button_2_original;     // RE9
     int button1_confirmed;
     int button2_confirmed;
+    int receive_size;
+    int transmit_size;
 
     car_state current_car_state;
 
@@ -135,6 +136,11 @@ void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void) {
 void __attribute__((interrupt, no_auto_psv)) _INT2Interrupt(void) {
     global_system_state.button_2_original = 1;
     
+    // we find the ammount of data as athe difference 
+    global_system_state.receive_size = (receive_buffer.head + R_BUF_SIZE - receive_buffer.tail ) % R_BUF_SIZE;
+
+    global_system_state.transmit_size = (transmit_buffer.head + T_BUF_SIZE - transmit_buffer.tail ) % T_BUF_SIZE;
+
     // clear the flag and disable the interrupt. The disabing is done to combat bounces. The interrupt enable is activated after 200ms which should be sufficient time to allow for it
     IFS1bits.INT2IF = 0; 
     IEC1bits.INT2IE = 0;
@@ -159,23 +165,42 @@ void scheduler_run(TaskData tasks[]){
 }
 
 
+//! Tasks
+
+//* finished ??
 void led_blink(void* param){
-    shared_data *sd = (shared_data *) param; 
+    shared_data *data = (shared_data *) param; 
 
     LATAbits.LATA0 =  !LATAbits.LATA0;
 
-    // halted
-//    if (sd->car_state->current_car_state == 1){
-//        LATBbits.LATB8 = !LATBbits.LATB8;   // left side    
-//        LATFbits.LATF1 = !LATFbits.LATF1;   // right side
-//    }
-//    // ob avoid
-//    else if (sd->car_state->current_car_state == 2){
-//        LATFbits.LATF1 = !LATFbits.LATF1;
-//    } 
+   switch (data->current_car_state){
+        case HALT:
+            LATBbits.LATB8 = !LATBbits.LATB8;    // left side blink 
+            LATFbits.LATF1 = !LATFbits.LATF1;    // right side blink
+            LATGbits.LATG1 = 0;                  // low off
+            break;
+
+        case MOVE:
+            LATBbits.LATB8 = 0;                 //left  off     
+            LATFbits.LATF1 = 0;                 // right off     
+            LATGbits.LATG1 = 1;                 // low   on      
+            break;
+
+        case AVOID:
+            LATBbits.LATB8 = 0;                 // left side blink 
+            LATFbits.LATF1 = !LATFbits.LATF1;   // right side blink
+            LATGbits.LATG1 = 1;                 // low   on  
+            break;
+
+        default:
+            LATBbits.LATB8 = 0;
+            LATFbits.LATF1 = 0;
+            LATGbits.LATG1 = 0;
+            break;
+   }
 }
 
-
+//* finished ??
 void uart_sending(void* param){
     shared_data *dat = (shared_data *) param;
     char buffer[32];
@@ -205,17 +230,75 @@ void ir_read(void* param){
     sd->ir_distance = adc_auto_read();
 }
 
-
+//TODO the pwm control
 void pwd_update(void* param){
     int x;
 }
 
+// TODO FSM
+void finite_state_machine(void* param){
 
+}
+
+// TODO
+void parse_uart(void* param){
+
+}
+
+//* finished ??
+void button_handler(void* param){
+    shared_data *data = (shared_data *) param;
+
+    // handle the buffer sizes
+    if (data->button_2_original == 1){
+        char buffer[32];
+
+        sprintf(buffer, "$MBUF,%d,%d*", data->transmit_size, data->receive_size);
+        uart_transmit(buffer);
+
+        data->button_2_original = 0;
+        data->button2_confirmed = 1;
+    }
+
+    // handle the state transitions
+    if (data->button_1_original == 1){
+        
+        if(data->current_car_state == HALT){
+            data->current_car_state = MOVE;
+        }
+        else{
+            data->current_car_state = HALT;
+        }
+
+        data->button_1_original = 0;
+        data->button1_confirmed = 1;
+    }
+
+    // after 300ms the button can be pressed again this way we avoid bounces
+    if (data->button1_confirmed > 0) {
+        if(++data->button1_confirmed >=3 ){
+            data->button1_confirmed = 0;
+            IFS1bits.INT1IF = 0;
+            IEC1bits.INT1IE = 1;
+        }
+    }
+
+    if (data->button2_confirmed > 0) {
+        if(++data->button2_confirmed >=3){
+            data->button2_confirmed = 0;
+            IFS1bits.INT2IF = 0;
+            IEC1bits.INT2IE = 1;
+        }
+    }
+}
+
+//TODO
 void accelerometer(void* param){
     shared_data *sd = (shared_data *) param;
     sd->accel_data = accel_read();
 }
 
+//TODO
 void magnetometer(void* param){
     shared_data *sd = (shared_data *) param;
     sd->mag_data = mag_read();
@@ -246,52 +329,61 @@ void task_setup(){
     schedInfo[1].params = (void*)&global_system_state;
 
 
-    //? Accelerometer - read
+    //? Handler of the FSM
     schedInfo[2].counter = 0;
     schedInfo[2].period = 50;
     schedInfo[2].enable = 0;
-    schedInfo[2].task_function = accelerometer;
+    schedInfo[2].task_function = finite_state_machine;
     schedInfo[2].params = (void*)&global_system_state;
 
 
-    //? Magnetometer - read
+    //? We parse the receiving messages 
     schedInfo[3].counter = 15;
     schedInfo[3].period = 50;
     schedInfo[3].enable = 1;
-    schedInfo[3].task_function = magnetometer;
+    schedInfo[3].task_function = parse_uart;
     schedInfo[3].params = (void*)&global_system_state;
 
 
     //? Light Control
     schedInfo[4].counter = 5;
-    schedInfo[4].period = 500;
+    schedInfo[4].period = 250;
     schedInfo[4].enable = 1;
     schedInfo[4].task_function = led_blink;
     schedInfo[4].params = (void*)&global_system_state;
 
 
+    //* Shifted tasks
     //? Uart transmitting
-    schedInfo[5].counter = 0;
+    schedInfo[5].counter = 5;
     schedInfo[5].period = 50;
     schedInfo[5].enable = 1;
     schedInfo[5].task_function = uart_sending;
     schedInfo[5].params = (void*)&global_system_state;
 
 
-    // //? Accelerometer
-    // schedInfo[6].counter = 0;
-    // schedInfo[6].period = 50;
-    // schedInfo[6].enable = 1;
-    // schedInfo[6].task_function = accelerometer;
-    // schedInfo[6].params = (void*)&global_system_state;
+    //? Accelerometer
+    schedInfo[6].counter = 15;
+    schedInfo[6].period = 50;
+    schedInfo[6].enable = 1;
+    schedInfo[6].task_function = accelerometer;
+    schedInfo[6].params = (void*)&global_system_state;
 
 
-    // //? Magnetometer
-    // schedInfo[7].counter = 0;
-    // schedInfo[7].period = 50;
-    // schedInfo[7].enable = 1;
-    // schedInfo[7].task_function = magnetometer;
-    // schedInfo[7].params = (void*)&global_system_state;
+    //? Magnetometer
+    schedInfo[7].counter = 25;
+    schedInfo[7].period = 50;
+    schedInfo[7].enable = 1;
+    schedInfo[7].task_function = magnetometer;
+    schedInfo[7].params = (void*)&global_system_state;
+
+
+    //? Button debounce
+    schedInfo[8].counter = 40;
+    schedInfo[8].period = 50;
+    schedInfo[8].enable = 1;
+    schedInfo[8].task_function = button_handler;
+    schedInfo[8].params = (void*)&global_system_state;
 }
 
 
