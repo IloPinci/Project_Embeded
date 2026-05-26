@@ -7,20 +7,18 @@
 #define AUTO 1
 
 #define BAT 11
-#define IR 5
+#define IR 14
 
-#define BIT10 0
-#define BIT12 1
+// ADC setup function
+void adc_setup();
 
-/* 
- * ADC setup (single channel), choose: 
- * -10 or 12 bits mode (input: BIT10/BIT12)
- * -Manual/automatic sampling and conversion (input: MANUAL/AUTO)
- * -Analog pin to read from (input: pin number)
-*/
-void adc_setup(int bit_mode, int sampling_mode, int conversion_mode, int an_read);
+// Returns data from ADC, select the pin to read from (AN11 - battery, AN14 - IR)
+double adc_read(int pin);
 
-// Returns data from ADC, set the parameters according to adc_setup
-double adc_read(int sampling_mode, int conversion_mode);
+// Value conversion for battery
+double battery_conversion(int read_value);
+
+// Value conversion for IR
+double IR_conversion(int read_value);
 
 #endif 

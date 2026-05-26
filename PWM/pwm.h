@@ -26,7 +26,7 @@ void pwm_stop(int oc_select);
 void pwm_stop_all(void);
 
 // Control motors through speed and yaw_rate
-void buggy_control(int speed, int yaw_rate);
+void pwm_control(int speed, int yaw_rate);
 
 // Helping function to convert duty cycles to valid registers values
 unsigned int pwm_to_ticks(int pwm_percent);

@@ -15,17 +15,6 @@ be off.
 #include <stdbool.h>
 #include <math.h>
 
-// TODO: UPDATE THE STRUCT IN THE spi.h FILE INCLUDING YAW
-typedef struct{
-    float axis_x;
-    float axis_y;
-    float axis_z;
-
-    float roll;         //accelerometer: computed roll angle in degrees
-    float pitch;        //accelerometer: computed pitch angle in degrees
-    float yaw;          //accelerometer: computed yaw angle in degrees
-} Sensor_DataStruct;
-
 // Obstacle avoidance states
 #define INIT 0
 #define ROT_CLOCKWISE 1
@@ -62,19 +51,19 @@ case OBSTACLE_AVOIDANCE:
 
 void obstacle_avoidance(){
     if(!read_once){
-        obstacle_yaw = acc_values.yaw;  // Read SPI value once when one of the rotation states is triggered
+        obstacle_yaw = sd->accel_data.yaw;  // Read SPI value once when one of the rotation states is triggered
         read_once = true;
         if(obs_avoid_state == INIT){
             obs_avoid_state = ROT_CLOCKWISE;
-            buggy_control(0, -100);         // Rotate clockwise about 90 degrees
+            pwm_control(0, -100);     // Rotate clockwise about 90 degrees
         } else {
             obs_avoid_state = ROT_COUNTERCLOCKWISE;
-            buggy_control(0, 100);          // Rotate counterclockwise about 90 degrees
+            buggy_control(0, 100);      // Rotate counterclockwise about 90 degrees
         }
     }
 
-    if((fabsf(angle_diff(acc_values.yaw, obstacle_yaw)) >= 90.0f) && obs_avoid_state == ROT_CLOCKWISE){
-        buggy_control(1, 0);            // Move the buggy with a low speed after rotating it about 90 degrees clockwise
+    if((fabsf(angle_diff(sd->accel_data.yaw, obstacle_yaw)) >= 90.0f) && obs_avoid_state == ROT_CLOCKWISE){
+        pwm_control(1, 0);            // Move the buggy with a low speed after rotating it about 90 degrees clockwise
         obs_avoid_state = MOVE_FORWARD;
         two_sec_counter = 0;
     }
@@ -87,26 +76,17 @@ void obstacle_avoidance(){
         }
     }
 
-    if((fabsf(angle_diff(acc_values.yaw, obstacle_yaw)) >= 90.0f) && obs_avoid_state == ROT_COUNTERCLOCKWISE){
+    if((fabsf(angle_diff(sd->accel_data.yaw, obstacle_yaw)) >= 90.0f) && obs_avoid_state == ROT_COUNTERCLOCKWISE){
         read_once = false;
         obs_avoid_state = INIT;
 
         // TODO: this part should be combined with the IR reading, the code below is probably wrong
-        if(robot_state == OBSTACLE_AVOIDANCE){ 
+        if(sd->current_car_state == AVOID){ 
             rep++;      // Increase obstacle avoidance attempts
         } else {
             rep = 0;
-            robot_state = MOVING;  // If no obstacle is detected, back to moving state
+            sd->current_car_state = MOVE;  // If no obstacle is detected, back to moving state
         }
-        if(rep >= 3){ robot_state = HALTED; }   // Goes into HALTED state if more than 3 attempts have been performed
+        if(rep >= 3){ sd->current_car_state = HALT; }   // Goes into HALTED state if more than 3 attempts have been performed
     }
-
-    // LEDs
-    LATBbits.LATB8 = 0;     // Left side lights off
-    LATGbits.LATG1 = 1;     // Low intensity lights on
-    if (++timer_count >= 250) {
-            LATFbits.LATF1 = !LATFbits.LATF1;   // Right side lights blinking at 1 Hz
-            timer_count = 0;
-        }
-
 }

@@ -76,7 +76,7 @@ void pwm_stop_all(void){
     OC4R = 0;
 }
 
-void buggy_control(int speed, int yaw_rate){
+void pwm_control(int speed, int yaw_rate){
     
     int left_pwm  = speed - yaw_rate;
     int right_pwm = speed + yaw_rate;
