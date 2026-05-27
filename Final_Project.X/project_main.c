@@ -118,9 +118,10 @@ void library_setup(){
     spi_setup();        
     mag_setup(); 
     pwm_setup_all();   
+    adc_setup();
     
     // we use scan mode so both the battery and the IR ca be read in a non blocking way
-    adc_scan_setup(BIT10);    // battery
+    //adc_scan_setup(BIT10);    // battery
 }
 
 
@@ -223,16 +224,64 @@ void uart_sending(void* param){
 }
 
 
-//TODO: We should read the IR and transmit the value every 100ms
+//* finished ??
 void ir_read(void* param){
     shared_data *sd = (shared_data *) param;
+    
+    float raw_ir_data = adc_read(14);       // read ir from channel 14
+    
+    // calculate voltage
+    float voltage = 3.3 * raw_ir_data / 1024.0;     // for 10 bit adc and 3.3 voltage range
+    
+    // convert into distance
+    float converted_distance = 2.34f
+                         - 4.74f * voltage
+                         + 4.06f * voltage * voltage
+                         - 1.60f * voltage * voltage * voltage
+                         + 0.24f * voltage * voltage * voltage * voltage;
 
-    sd->ir_distance = adc_auto_read();
+
+    sd->ir_distance = converted_distance;
+
+
+    if (converted_distance <= ir_threshold){
+        sd->current_car_state = AVOID;
+    }     
 }
+
+
+void battery_read(void* param){
+    shared_data *sd = (shared_data *) param;
+    
+    float raw_bat_data = adc_read(11);       // read battery from channel 11
+    // calculate voltage
+    float voltage = 3.3 * raw_bat_data / 1024.0;     // for 10 bit adc and 3.3 voltage range
+    // multiply to account for whole battery
+    float result = 3 * voltage;
+    sd->battery_voltage = result;
+}
+
 
 //TODO the pwm control
 void pwd_update(void* param){
-    int x;
+    shared_data *sd = (shared_data *) param;
+    switch (sd->current_car_state){
+        case HALT:
+            pwm_stop_all();                     // stop all the motors
+            break;
+
+        case MOVE:
+            // Move the buggy according to the speed and yaw_rate values received by UART
+            //pwm_control(sd->pwm.speed,sd->pwm.yaw_rate);     
+            break;
+
+        case AVOID:
+
+            break;
+
+        default:
+            break;
+    }
 }
 
 // TODO FSM
@@ -316,7 +365,7 @@ void task_setup(){
     //? IR - read
     schedInfo[0].counter = 0;
     schedInfo[0].period = 1;
-    schedInfo[0].enable = 0;
+    schedInfo[0].enable = 1;
     schedInfo[0].task_function = ir_read;
     schedInfo[0].params = (void*)&global_system_state;
 
@@ -340,7 +389,7 @@ void task_setup(){
     //? We parse the receiving messages 
     schedInfo[3].counter = 15;
     schedInfo[3].period = 50;
-    schedInfo[3].enable = 1;
+    schedInfo[3].enable = 0;
     schedInfo[3].task_function = parse_uart;
     schedInfo[3].params = (void*)&global_system_state;
 

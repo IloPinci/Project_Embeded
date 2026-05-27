@@ -14,20 +14,8 @@
 
 void adc_setup();
 
-float adc_read(int sampling_mode, int conversion_mode);
+double adc_read(int channel);
 
-float adc_manual_read();
-
-//void adc_ir_setup();
-
-float adc_auto_read();
-
-float adc_manual_stop_only_read();
-
-float adc_manual_start_only_read();
-
-int adc_scan_read(float *ch0, float *ch1);
-
-void adc_scan_setup(int bit_mode);
+double adc_scan_read(float *ch0, float *ch1);
 
 #endif
