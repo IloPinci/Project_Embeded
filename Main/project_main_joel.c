@@ -20,6 +20,13 @@
 #define Max_Tasks 9
 #define ir_threshold 30
 
+//! CONSTANTS FOR OBSTACLE AVOIDANCE STATE MACHINE------
+#define INIT 0
+#define ROT_CLOCKWISE 1
+#define MOVE_FORWARD 2
+#define ROT_COUNTERCLOCKWISE 3
+//------------------------------------------------------
+
 //! Data structures
 // what a task should have
 typedef struct{
@@ -30,18 +37,20 @@ typedef struct{
     void * params;
 }TaskData; 
 
+// OBSTACLE AVOIDANCE STATE MACHINE STRUCT
+typedef struct{
+    int  obs_avoid_state;       // Sub-state
+    int  two_sec_counter;       // Two seconds counter for the movement after rotation
+    int  rep;                   // After three rep goes in HALT state
+    double obstacle_yaw;        // Store current yaw
+}Obs_avoid; 
+
 // a finite state machine for the car
 typedef enum{
     HALT = 0,
     MOVE = 1,
     AVOID = 2
 }car_state;
-
-// PWM struct
-typedef struct{
-    int speed;
-    int yaw_rate;
-}pwm_state;
 
 // a data structure which is shared by the tasks
 typedef struct{
@@ -53,6 +62,10 @@ typedef struct{
     Sensor_DataStruct accel_data;
     Sensor_DataStruct mag_data;
 
+    // uart recieve
+    volatile int speed;
+    volatile int yawRate;
+
     // handling of buttons
     volatile int button_1_original;     // RE8
     volatile int button_2_original;     // RE9
@@ -61,10 +74,9 @@ typedef struct{
     int receive_size;
     int transmit_size;
 
-    // TODO: PWM TO READ FROM UART
-    pwm_state pwm;
-
     car_state current_car_state;
+
+    Obs_avoid obs_avoid_var;
 
     int led_toggle;
     int adc_ready;
@@ -77,10 +89,33 @@ shared_data global_system_state = {0};
 extern Circular_Buffer receive_buffer;
 extern Circular_Buffer transmit_buffer;
 
+
+
+// ------ OBSTACLE AVOIDANCE HELPER FUNCTION--------
+
+// Compute yaw difference
+double angle_diff(double a, double b) {
+    double diff = a - b;
+    // Wrap into [-180, +180]
+    while (diff > 180.0f)  diff -= 360.0f;
+    while (diff < -180.0f) diff += 360.0f;
+    return diff;
+}
+
+//------------------------------------------------------
+
+
+
+
+
 //! Setups
 void port_setup(){
     //! Disable analog inputs 
     ANSELA = ANSELB = ANSELC = ANSELD = ANSELE = ANSELG = 0x0000;
+    // enable AN5 and AN11 (the ir and the battery)
+    ANSELBbits.ANSB5  = 1;  
+    ANSELBbits.ANSB11 = 1;
+
 
     // lights
     TRISAbits.TRISA0 = 0;   // LED1 output
@@ -120,6 +155,9 @@ void library_setup(){
     mag_setup(); 
     pwm_setup_all();   
     adc_setup();
+    
+    // we use scan mode so both the battery and the IR ca be read in a non blocking way
+    //adc_scan_setup(BIT10);    // battery
 }
 
 
@@ -168,10 +206,35 @@ void scheduler_run(TaskData tasks[]){
 
 //* finished ??
 void led_blink(void* param){
+    shared_data *data = (shared_data *) param; 
+
     LATAbits.LATA0 =  !LATAbits.LATA0;
-    // I would put it inside the main
-    // as the requirements state:
-    // The LED A0 and should blink at 1 Hz frequency at all times, to indicate the functioning of the main loop.
+
+   switch (data->current_car_state){
+        case HALT:
+            LATBbits.LATB8 = !LATBbits.LATB8;    // left side blink 
+            LATFbits.LATF1 = !LATFbits.LATF1;    // right side blink
+            LATGbits.LATG1 = 0;                  // low off
+            break;
+
+        case MOVE:
+            LATBbits.LATB8 = 0;                 //left  off     
+            LATFbits.LATF1 = 0;                 // right off     
+            LATGbits.LATG1 = 1;                 // low   on      
+            break;
+
+        case AVOID:
+            LATBbits.LATB8 = 0;                 // left side blink 
+            LATFbits.LATF1 = !LATFbits.LATF1;   // right side blink
+            LATGbits.LATG1 = 1;                 // low   on  
+            break;
+
+        default:
+            LATBbits.LATB8 = 0;
+            LATFbits.LATF1 = 0;
+            LATGbits.LATG1 = 0;
+            break;
+   }
 }
 
 //* finished ??
@@ -197,47 +260,115 @@ void uart_sending(void* param){
 }
 
 
-// Read the IR and transmit the value every 100ms
+//* finished ??
 void ir_read(void* param){
     shared_data *sd = (shared_data *) param;
-    sd->ir_distance = adc_read(IR);
+    
+    float raw_ir_data = adc_read(14);       // read ir from channel 14
+    
+    // calculate voltage
+    float voltage = 3.3 * raw_ir_data / 1024.0;     // for 10 bit adc and 3.3 voltage range
+    
+    // convert into distance
+    float converted_distance = 2.34f
+                         - 4.74f * voltage
+                         + 4.06f * voltage * voltage
+                         - 1.60f * voltage * voltage * voltage
+                         + 0.24f * voltage * voltage * voltage * voltage;
+
+
+    sd->ir_distance = converted_distance;
+
+
+    if (converted_distance <= ir_threshold && sd->current_car_state == MOVE){
+            sd->current_car_state = AVOID;
+    }
 }
 
-// Read battery level
+
 void battery_read(void* param){
     shared_data *sd = (shared_data *) param;
-    sd->battery_voltage = adc_read(BAT);
+    
+    float raw_bat_data = adc_read(11);       // read battery from channel 11
+    // calculate voltage
+    float voltage = 3.3 * raw_bat_data / 1024.0;     // for 10 bit adc and 3.3 voltage range
+    // multiply to account for whole battery
+    float result = 3 * voltage;
+    sd->battery_voltage = result;
 }
 
-// TODO FSM
-void finite_state_machine(void* param){
+
+//TODO the pwm control
+void pwm_update(void* param){
     shared_data *sd = (shared_data *) param;
     switch (sd->current_car_state){
         case HALT:
-            LATBbits.LATB8 = !LATBbits.LATB8;   // left side blink 
-            LATFbits.LATF1 = !LATFbits.LATF1;   // right side blink
-            LATGbits.LATG1 = 0;                 // low off
-            pwm_stop_all();                     // stop all the motors
+            pwm_stop_all();     // Stop all the motors
+
+            // Reset obstacle avoidance variables 
+            sd->obs_avoid_var.obs_avoid_state = INIT;
+            sd->obs_avoid_var.rep = 0;
+            sd->obs_avoid_var.two_sec_counter = 0;        
             break;
 
         case MOVE:
-            LATBbits.LATB8 = 0;                 //left  off     
-            LATFbits.LATF1 = 0;                 // right off     
-            LATGbits.LATG1 = 1;                 // low   on 
             // Move the buggy according to the speed and yaw_rate values received by UART
-            pwm_control(sd->pwm.speed,sd->pwm.yaw_rate);     
+            //pwm_control(sd->pwm.speed,sd->pwm.yaw_rate);     
             break;
 
         case AVOID:
-            LATBbits.LATB8 = 0;                 // left side blink 
-            LATFbits.LATF1 = !LATFbits.LATF1;   // right side blink
-            LATGbits.LATG1 = 1;                 // low   on  
+            // INIT -> ROT_CLOCKWISE 
+                if (sd->obs_avoid_var.obs_avoid_state == INIT) {
+                    sd->obs_avoid_var.obstacle_yaw = sd->accel_data.yaw;   // Store current yaw
+                    sd->obs_avoid_var.obs_avoid_state = ROT_CLOCKWISE;
+                    pwm_control(0, -50);    // Start rotating clockwise
+                }
+
+                // Sub-state: ROT_CLOCKWISE 
+                // Wait until ~90 degrees have been swept
+                if (sd->obs_avoid_var.obs_avoid_state == ROT_CLOCKWISE) {
+                    if (fabs(angle_diff(sd->accel_data.yaw, sd->obs_avoid_var.obstacle_yaw)) >= 90.0f) {
+                        sd->obs_avoid_var.obs_avoid_state = MOVE_FORWARD;
+                        sd->obs_avoid_var.two_sec_counter = 0;
+                        pwm_control(30, 0);     // Move forward at low speed
+                    }
+                }
+
+                // Sub-state: MOVE_FORWARD
+                // pwm_update called at 500 Hz -> 2 s = 1000 ticks
+                if (sd->obs_avoid_var.obs_avoid_state == MOVE_FORWARD) {
+                    if (++sd->obs_avoid_var.two_sec_counter >= 1000) {
+                        sd->obs_avoid_var.obs_avoid_state = ROT_COUNTERCLOCKWISE;
+                        sd->obs_avoid_var.obstacle_yaw = sd->accel_data.yaw;   // Store current yaw
+                        pwm_control(0, 50);     // Start rotating anticlockwise
+                    }
+                }
+
+                // Sub-state: ROT_COUNTERCLOCKWISEs
+                // Return to the previous heading (~90 deg back)
+                if (sd->obs_avoid_var.obs_avoid_state == ROT_COUNTERCLOCKWISE) {
+                    if (fabs(angle_diff(sd->accel_data.yaw, sd->obs_avoid_var.obstacle_yaw)) >= 90.0f) {
+                        pwm_stop_all();
+                        sd->obs_avoid_var.obs_avoid_state = INIT;
+
+                        if (sd->ir_distance <= ir_threshold) {
+                            // Obstacle still there: try again or give up
+                            sd->obs_avoid_var.rep++;
+                            if (sd->obs_avoid_var.rep >= 3) {
+                                sd->obs_avoid_var.rep = 0;
+                                sd->current_car_state = HALT;
+                            }
+                            // else: loop back — next call will re-enter INIT
+                        } else {
+                            // Clear path: go back to MOVE
+                            sd->obs_avoid_var.rep = 0;
+                            sd->current_car_state = MOVE;
+                        }
+                    }
+                }
             break;
 
         default:
-            LATBbits.LATB8 = 0;
-            LATFbits.LATF1 = 0;
-            LATGbits.LATG1 = 0;
             break;
     }
 }
@@ -318,7 +449,7 @@ void task_setup(){
     //? IR - read
     schedInfo[0].counter = 0;
     schedInfo[0].period = 1;
-    schedInfo[0].enable = 0;
+    schedInfo[0].enable = 1;
     schedInfo[0].task_function = ir_read;
     schedInfo[0].params = (void*)&global_system_state;
 
@@ -327,7 +458,7 @@ void task_setup(){
     schedInfo[1].counter = 0;
     schedInfo[1].period = 1;
     schedInfo[1].enable = 0;
-    schedInfo[1].task_function = pwd_update;
+    schedInfo[1].task_function = pwm_update;
     schedInfo[1].params = (void*)&global_system_state;
 
 
@@ -342,7 +473,7 @@ void task_setup(){
     //? We parse the receiving messages 
     schedInfo[3].counter = 15;
     schedInfo[3].period = 50;
-    schedInfo[3].enable = 1;
+    schedInfo[3].enable = 0;
     schedInfo[3].task_function = parse_uart;
     schedInfo[3].params = (void*)&global_system_state;
 
@@ -386,8 +517,6 @@ void task_setup(){
     schedInfo[8].enable = 1;
     schedInfo[8].task_function = button_handler;
     schedInfo[8].params = (void*)&global_system_state;
-
-    //TODO: add battery read task or insert it inside another task
 }
 
 
