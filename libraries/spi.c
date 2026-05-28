@@ -15,7 +15,6 @@
 #include <math.h>
 #include "timer.h"
 
-#define PI  3.14159265358979323846
 
 void spi_setup(void) {
 
@@ -116,9 +115,9 @@ void mag_setup(void) {
 }
 
 // Reads data from the accelerometer and computes to g and computes roll and pitch angles
-Sensor_DataStruct accel_read() {
+AccelData accel_read() {
 
-    Sensor_DataStruct result;
+    AccelData result;
     uint16_t LSB_part, MSB_part;
     int16_t ax, ay, az;
 
@@ -160,9 +159,9 @@ Sensor_DataStruct accel_read() {
 }
 
 // Read from Magnetometer (Not needed for this Exercise but for later modularity)
-Sensor_DataStruct mag_read() {
+MagData mag_read() {
 
-    Sensor_DataStruct result;
+    MagData result;
     uint16_t LSB_part, MSB_part;
     int16_t ax, ay, az;
 
@@ -188,17 +187,10 @@ Sensor_DataStruct mag_read() {
 
     LATDbits.LATD6 = 1;
     
-    result.axis_x = ax;
-    result.axis_y = ay;
-    result.axis_z = az;
+    result.axis_x = (float) ax;
+    result.axis_y = (float) ay;
+    result.axis_z = (float) az;
 
     return result;
 }
 
-// Allows to choose whether to read from the magnetometer or the accelerometer
-Sensor_DataStruct sensor_read(int select) {
-    if (select == ACC) {
-        return accel_read();
-    }
-    return mag_read();
-}

@@ -13,6 +13,7 @@
 #define UART_H
 
 #define R_BUF_SIZE  64
+#define PI  3.14159265358979323846
 /*
  * Allows the user to send up to 9 commands since they are 7bytes each.
  * We chose this value just for extreme test cases. However even 16 is an acceptable number
@@ -54,5 +55,8 @@ int uart_receive_char(char *out);
 
 // change frequency according to input
 int uart_frequency_change(int value, int current);
+
+// reads one line
+int uart_receive_line(char *out, int max_len);
 
 #endif

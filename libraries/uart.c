@@ -133,3 +133,41 @@ int uart_frequency_change(int value, int current) {
             return current;
     }
 }
+
+
+// Reads one complete "$...*" message from the buffer.
+// Call every scheduler tick. Returns 1 when a full message is ready, 0 otherwise.
+int uart_receive_line(char *out, int max_len) {
+    // these are static bc we want to be able to follow the continuation of the message even in the next tick
+    static char buf[32];
+    static int  pos        = 0;
+    static int  receiving  = 0;
+    char c;
+
+    while (uart_receive_char(&c)) {
+
+        if (c == '$') {             // message start
+            pos       = 0;
+            receiving = 1;
+        }
+
+        if (receiving) {
+            buf[pos++] = c;
+
+            if (c == '*') {         // message end
+                buf[pos] = '\0';
+                for (int i = 0; i <= pos; i++) out[i] = buf[i];
+                pos       = 0;
+                receiving = 0;
+                return 1;
+            }
+
+            if (pos >= max_len) {   // overflow protection
+                pos       = 0;
+                receiving = 0;
+            }
+        }
+    }
+
+    return 0;
+}

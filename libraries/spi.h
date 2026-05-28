@@ -18,14 +18,19 @@
 #define GYR 2
 #define MAG 3
     
-typedef struct{
+typedef struct {
     float axis_x;
     float axis_y;
     float axis_z;
+    float roll;  // Computed roll angle in degrees
+    float pitch; // Computed pitch angle in degrees
+} AccelData;
 
-    float roll;         //accelerometer: computed roll angle in degrees
-    float pitch;        //accelerometer: computed pitch angle in degrees
-} Sensor_DataStruct;
+typedef struct {
+    float axis_x;
+    float axis_y;
+    float axis_z;
+} MagData;
      
 // Sets up SPI configuration and configures pins
 void spi_setup();
@@ -39,13 +44,11 @@ void accel_bw(int bw);
 void mag_setup(void);
 
 // Reads accelerometer data and returns Sensor Datastruct
-Sensor_DataStruct accel_read();
+AccelData accel_read();
 
 // Reads magnetometer data and returns Sensor Datastruct
-Sensor_DataStruct mag_read();
+MagData mag_read();
 
-// Allows to chose what sensor to read from
-Sensor_DataStruct sensor_read(int select);
 
 
 #endif
