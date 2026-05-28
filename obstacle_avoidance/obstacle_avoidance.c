@@ -26,7 +26,7 @@ Sensor_DataStruct acc_values = {0};
 float obstacle_yaw;
 
 // State vector
-int obs_avoid_state = INIT;
+int state = INIT;
 
 // Counters and flags
 bool read_once = false;
@@ -53,22 +53,22 @@ void obstacle_avoidance(){
     if(!read_once){
         obstacle_yaw = sd->accel_data.yaw;  // Read SPI value once when one of the rotation states is triggered
         read_once = true;
-        if(obs_avoid_state == INIT){
-            obs_avoid_state = ROT_CLOCKWISE;
+        if(state == INIT){
+            state = ROT_CLOCKWISE;
             pwm_control(0, -100);     // Rotate clockwise about 90 degrees
         } else {
-            obs_avoid_state = ROT_COUNTERCLOCKWISE;
+            state = ROT_COUNTERCLOCKWISE;
             buggy_control(0, 100);      // Rotate counterclockwise about 90 degrees
         }
     }
 
-    if((fabsf(angle_diff(sd->accel_data.yaw, obstacle_yaw)) >= 90.0f) && obs_avoid_state == ROT_CLOCKWISE){
+    if((fabsf(angle_diff(sd->accel_data.yaw, obstacle_yaw)) >= 90.0f) && state == ROT_CLOCKWISE){
         pwm_control(1, 0);            // Move the buggy with a low speed after rotating it about 90 degrees clockwise
-        obs_avoid_state = MOVE_FORWARD;
+        state = MOVE_FORWARD;
         two_sec_counter = 0;
     }
 
-    if(obs_avoid_state == MOVE_FORWARD && read_once == true){
+    if(state == MOVE_FORWARD && read_once == true){
         if(two_sec_counter >= 1000){
             read_once = false;
         } else {
@@ -76,9 +76,9 @@ void obstacle_avoidance(){
         }
     }
 
-    if((fabsf(angle_diff(sd->accel_data.yaw, obstacle_yaw)) >= 90.0f) && obs_avoid_state == ROT_COUNTERCLOCKWISE){
+    if((fabsf(angle_diff(sd->accel_data.yaw, obstacle_yaw)) >= 90.0f) && state == ROT_COUNTERCLOCKWISE){
         read_once = false;
-        obs_avoid_state = INIT;
+        state = INIT;
 
         // TODO: this part should be combined with the IR reading, the code below is probably wrong
         if(sd->current_car_state == AVOID){ 

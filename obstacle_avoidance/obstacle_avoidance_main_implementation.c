@@ -13,7 +13,7 @@ void finite_state_machine(void* param) {
     shared_data *sd = (shared_data *) param;
 
     // Sub-state variables: static so they persist across calls
-    static int  obs_avoid_state  = INIT;
+    static int  state  = INIT;
     static int  two_sec_counter  = 0;
     static int  rep              = 0;
     static float obstacle_yaw    = 0.0f;
@@ -24,18 +24,18 @@ void finite_state_machine(void* param) {
         // ----- AVOID -----
         case AVOID:
             // --- Sub-state: INIT -> ROT_CLOCKWISE ---
-            if (obs_avoid_state == INIT) {
+            if (state == INIT) {
                 obstacle_yaw = sd->accel_data.yaw;   // snapshot heading
-                obs_avoid_state = ROT_CLOCKWISE;
+                state = ROT_CLOCKWISE;
                 // Positive yaw_rate = anticlockwise, so clockwise = negative
                 pwm_control(0, -50);
             }
 
             // --- Sub-state: ROT_CLOCKWISE ---
             // Wait until ~90 degrees have been swept
-            if (obs_avoid_state == ROT_CLOCKWISE) {
+            if (state == ROT_CLOCKWISE) {
                 if (fabsf(angle_diff(sd->accel_data.yaw, obstacle_yaw)) >= 90.0f) {
-                    obs_avoid_state = MOVE_FORWARD;
+                    state = MOVE_FORWARD;
                     two_sec_counter = 0;
                     pwm_control(30, 0);             // move forward at low speed
                 }
@@ -43,9 +43,9 @@ void finite_state_machine(void* param) {
 
             // --- Sub-state: MOVE_FORWARD ---
             // FSM at 10 Hz -> 2 s = 20 ticks
-            if (obs_avoid_state == MOVE_FORWARD) {
+            if (state == MOVE_FORWARD) {
                 if (++two_sec_counter >= 20) {
-                    obs_avoid_state = ROT_COUNTERCLOCKWISE;
+                    state = ROT_COUNTERCLOCKWISE;
                     obstacle_yaw  = sd->accel_data.yaw;   // new heading snapshot
                     pwm_control(0, 50);             // rotate anticlockwise
                 }
@@ -53,10 +53,10 @@ void finite_state_machine(void* param) {
 
             // --- Sub-state: ROT_COUNTERCLOCKWISE ---
             // Return to the previous heading (~90 deg back)
-            if (obs_avoid_state == ROT_COUNTERCLOCKWISE) {
+            if (state == ROT_COUNTERCLOCKWISE) {
                 if (fabsf(angle_diff(sd->accel_data.yaw, obstacle_yaw)) >= 90.0f) {
                     pwm_stop_all();
-                    obs_avoid_state = INIT;
+                    state = INIT;
 
                     if (sd->ir_distance <= ir_threshold) {
                         // Obstacle still there: try again or give up
