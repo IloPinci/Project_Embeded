@@ -142,12 +142,29 @@ void port_setup(){
     // the ISR for the buttons
     INTCON2bits.INT1EP = 1; 
     INTCON2bits.INT2EP = 1;
+
+    //route the RPI88 and 89 to the interrupt
+    RPINR0bits.INT1R = 0x58;
+    RPINR1bits.INT2R = 0x59;
+
     // clear the flags
     IFS1bits.INT1IF = 0;
     IFS1bits.INT2IF = 0;
     // enable the interrupts
     IEC1bits.INT1IE = 1;
     IEC1bits.INT2IE = 1;
+    
+    
+    TRISDbits.TRISD1 = 0;       // -Left PWM (VCPcon/RP65/RD1)
+    TRISDbits.TRISD2 = 0;       // Left PWM (DPH/RP66/RD2)
+    TRISDbits.TRISD3 = 0;       // -Right PWM (PMBE/RP67/RD3)
+    TRISDbits.TRISD4 = 0;       // Right PWM (PMWR/RP68/RD4)
+    
+    // Pin remapping
+    RPOR1bits.RP66R = 0b010000;     // Map left PWM to OC1
+    RPOR0bits.RP65R = 0b010001;     // Map -left PWM to OC2
+    RPOR2bits.RP68R = 0b010010;     // Map right PWM to OC3
+    RPOR1bits.RP67R = 0b010011;     // Map -right PWM to OC4
 }
 
 void library_setup(){
@@ -262,13 +279,13 @@ void uart_sending(void* param){
     char buffer[32];
 
     sprintf(buffer, "$MDIST,%.2f*", dat->ir_distance);
-    uart_transmit(buffer);
+    //uart_transmit(buffer);
 
     sprintf(buffer, "$MANGLE,%.2f,%.2f,%.2f*",
          dat->accel_data.roll, 
          dat->accel_data.pitch, 
          dat->yaw);
-    uart_transmit(buffer);
+    //uart_transmit(buffer);
 
     // every 1 hz we transmit what we have read. We enter uart_sending every 50 loops. And we want to send the the voltage every 500 loops. So we have to send it if we enter in the uart_sending 10 times
     if (++dat->led_toggle % 10 == 0){
@@ -336,24 +353,25 @@ void pwm_control(void* param){
 
         case MOVE:
             // Move the buggy according to the speed and yaw_rate values received by UART
-            pwm_move(sd->pwm.speed,sd->pwm.yawRate);     
+            //pwm_move(sd->pwm.speed,sd->pwm.yawRate);     
+            pwm_move(100,0); 
             break;
 
         case AVOID:
             // INIT -> ROT_CLOCKWISE 
             if (sd->obs_avoid_var.state == INIT) {
-                sd->obs_avoid_var.obstacle_yaw = sd->accel_data.yaw;   // Store current yaw
+                sd->obs_avoid_var.obstacle_yaw = sd->yaw;   // Store current yaw
                 sd->obs_avoid_var.state = ROT_CLOCKWISE;
-                pwm_control(0, -50);    // Start rotating clockwise
+                pwm_move(0, -50);    // Start rotating clockwise
             }
 
             // Sub-state: ROT_CLOCKWISE 
             // Wait until ~90 degrees have been swept
             if (sd->obs_avoid_var.state == ROT_CLOCKWISE) {
-                if (fabs(angle_diff(sd->accel_data.yaw, sd->obs_avoid_var.obstacle_yaw)) >= 90.0) {
+                if (fabs(angle_diff(sd->yaw, sd->obs_avoid_var.obstacle_yaw)) >= 90.0) {
                     sd->obs_avoid_var.state = MOVE_FORWARD;
                     sd->obs_avoid_var.two_sec_counter = 0;
-                    pwm_control(10, 0);     // Move forward at low speed
+                    pwm_move(10, 0);     // Move forward at low speed
                 }
             }
 
@@ -362,15 +380,15 @@ void pwm_control(void* param){
             if (sd->obs_avoid_var.state == MOVE_FORWARD) {
                 if (++sd->obs_avoid_var.two_sec_counter >= 1000) {
                     sd->obs_avoid_var.state = ROT_COUNTERCLOCKWISE;
-                    sd->obs_avoid_var.obstacle_yaw = sd->accel_data.yaw;   // Store current yaw
-                    pwm_control(0, 50);     // Start rotating anticlockwise
+                    sd->obs_avoid_var.obstacle_yaw = sd->yaw;   // Store current yaw
+                    pwm_move(0, 50);     // Start rotating anticlockwise
                 }
             }
 
             // Sub-state: ROT_COUNTERCLOCKWISEs
             // Return to the previous heading (~90 deg back)
             if (sd->obs_avoid_var.state == ROT_COUNTERCLOCKWISE) {
-                if (fabs(angle_diff(sd->accel_data.yaw, sd->obs_avoid_var.obstacle_yaw)) >= 90.0) {
+                if (fabs(angle_diff(sd->yaw, sd->obs_avoid_var.obstacle_yaw)) >= 90.0) {
                     pwm_stop_all();
                     sd->obs_avoid_var.state = INIT;
 
@@ -503,18 +521,18 @@ void task_setup(){
     schedInfo[0].params = (void*)&global_system_state;
 
 
-    //? PWD
-    schedInfo[1].counter = 0;
-    schedInfo[1].period = 1;
-    schedInfo[1].enable = 0;
-    schedInfo[1].task_function = pwd_update;
-    schedInfo[1].params = (void*)&global_system_state;
+//    //? PWD
+//    schedInfo[1].counter = 0;
+//    schedInfo[1].period = 1;
+//    schedInfo[1].enable = 0;
+//    schedInfo[1].task_function = pwd_update;
+//    schedInfo[1].params = (void*)&global_system_state;
 
 
     //? PWM control
     schedInfo[2].counter = 0;
     schedInfo[2].period = 1;
-    schedInfo[2].enable = 0;
+    schedInfo[2].enable = 1;
     schedInfo[2].task_function = pwm_control;
     schedInfo[2].params = (void*)&global_system_state;
 
@@ -522,7 +540,7 @@ void task_setup(){
     //? We parse the receiving messages 
     schedInfo[3].counter = 15;
     schedInfo[3].period = 50;
-    schedInfo[3].enable = 0;
+    schedInfo[3].enable = 1;
     schedInfo[3].task_function = parse_uart;
     schedInfo[3].params = (void*)&global_system_state;
 
