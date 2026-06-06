@@ -24,6 +24,7 @@ typedef struct {
     float axis_z;
     float roll;  // Computed roll angle in degrees
     float pitch; // Computed pitch angle in degrees
+    float yaw;
 } AccelData;
 
 typedef struct {

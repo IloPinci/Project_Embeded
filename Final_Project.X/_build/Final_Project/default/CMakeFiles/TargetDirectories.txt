@@ -1,0 +1,5 @@
+C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_default_XC16_compile.dir
+C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_image_4LtqCcwi.dir
+C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_Bin2Hex.dir
+C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/edit_cache.dir
+C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/rebuild_cache.dir
