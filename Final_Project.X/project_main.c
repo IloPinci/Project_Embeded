@@ -240,7 +240,7 @@ static int parser(const char *msg, int *speed, int *yawRate) {
 
 //! Tasks
 
-//* finished ??
+//?? finished ??
 void led_blink(void* param){
     shared_data *data = (shared_data *) param; 
 
@@ -273,23 +273,25 @@ void led_blink(void* param){
    }
 }
 
-//* finished ??
+//?? We send correctly the values. 
 void uart_sending(void* param){
     shared_data *dat = (shared_data *) param;
     char buffer[32];
 
-    sprintf(buffer, "$MDIST,%.2f*", dat->ir_distance);
-    //uart_transmit(buffer);
+    // IR
+    sprintf(buffer, "$MDIST,%.2f*\n", dat->ir_distance);
+    uart_transmit(buffer);
 
-    sprintf(buffer, "$MANGLE,%.2f,%.2f,%.2f*",
+    // magnetometer
+    sprintf(buffer, "$MANGLE,%.2f,%.2f,%.2f*\n",
          dat->accel_data.roll, 
          dat->accel_data.pitch, 
          dat->yaw);
-    //uart_transmit(buffer);
+    uart_transmit(buffer);
 
     // every 1 hz we transmit what we have read. We enter uart_sending every 50 loops. And we want to send the the voltage every 500 loops. So we have to send it if we enter in the uart_sending 10 times
     if (++dat->led_toggle % 10 == 0){
-        sprintf(buffer, "$MBATT,%.2f*", dat->battery_voltage);
+        sprintf(buffer, "$MBATT,%.2f*\n", dat->battery_voltage);
         uart_transmit(buffer);
         dat->led_toggle = 0;
     }
@@ -334,7 +336,7 @@ void battery_read(void* param){
     float voltage = 3.3 * raw_bat_data / 1024.0;     // for 10 bit adc and 3.3 voltage range
     // multiply to account for whole battery
     float result = 3 * voltage;
-    sd->battery_voltage = result;
+    sd->battery_voltage = result; 
 }
 
 
@@ -414,11 +416,7 @@ void pwm_control(void* param){
     }
 }
 
-/*
-void finite_state_machine(void* param){
 
-}
-*/
 
 //* finished ??
 void parse_uart(void* param){
@@ -436,7 +434,7 @@ void parse_uart(void* param){
     }
 }
 
-//* finished ??
+//?? finished 
 void button_handler(void* param){
     shared_data *data = (shared_data *) param;
 
@@ -444,7 +442,7 @@ void button_handler(void* param){
     if (data->button_2_original == 1){
         char buffer[32];
 
-        sprintf(buffer, "$MBUF,%d,%d*", data->transmit_size, data->receive_size);
+        sprintf(buffer, "$MBUF,%d,%d\n*", data->transmit_size, data->receive_size);
         uart_transmit(buffer);
 
         data->button_2_original = 0;
@@ -496,10 +494,12 @@ void accel_mag_read(void* param){
     float pitch_rad = sd->accel_data.pitch * (PI / 180.0f);
 
     // tiilt compesation in case that the car is in a slope
-    float x = sd->mag_data.axis_x * cosf(pitch_rad) + sd->mag_data.axis_z * sinf(pitch_rad);
-    float y = sd->mag_data.axis_x * sinf(roll_rad) * sinf(pitch_rad)
-              + sd->mag_data.axis_y * cosf(roll_rad)
-              - sd->mag_data.axis_z * cosf(pitch_rad) * sinf(roll_rad);
+    float x = sd->mag_data.axis_x * cosf(pitch_rad) 
+            + sd->mag_data.axis_y * sinf(roll_rad) * sinf(pitch_rad) 
+            + sd->mag_data.axis_z * cosf(roll_rad) * sinf(pitch_rad);
+
+    float y = sd->mag_data.axis_y * cosf(roll_rad) 
+            - sd->mag_data.axis_z * sinf(roll_rad);
 
     sd->yaw = atan2f(-y, x) * (180.0f / PI);
 }
@@ -521,68 +521,61 @@ void task_setup(){
     schedInfo[0].params = (void*)&global_system_state;
 
 
-//    //? PWD
-//    schedInfo[1].counter = 0;
-//    schedInfo[1].period = 1;
-//    schedInfo[1].enable = 0;
-//    schedInfo[1].task_function = pwd_update;
-//    schedInfo[1].params = (void*)&global_system_state;
-
-
     //? PWM control
+    schedInfo[1].counter = 0;
+    schedInfo[1].period = 1;
+    schedInfo[1].enable = 1;
+    schedInfo[1].task_function = pwm_control;
+    schedInfo[1].params = (void*)&global_system_state;
+
+
+    //* We offset the tasks that have the same period so they don't run in the same tick. Also the sensors have a lower offset than the consumers so the data is updated.
+
+    //? We parse the receiving messages 
     schedInfo[2].counter = 0;
-    schedInfo[2].period = 1;
+    schedInfo[2].period = 50;
     schedInfo[2].enable = 1;
-    schedInfo[2].task_function = pwm_control;
+    schedInfo[2].task_function = parse_uart;
     schedInfo[2].params = (void*)&global_system_state;
 
 
-    //? We parse the receiving messages 
-    schedInfo[3].counter = 15;
+    //? Accelerometer & Magnetometer
+    schedInfo[3].counter = 10;
     schedInfo[3].period = 50;
     schedInfo[3].enable = 1;
-    schedInfo[3].task_function = parse_uart;
+    schedInfo[3].task_function = accel_mag_read;
     schedInfo[3].params = (void*)&global_system_state;
 
 
-    //? Light Control
-    schedInfo[4].counter = 5;
-    schedInfo[4].period = 250;
+    //? Button handler
+    schedInfo[4].counter = 20;
+    schedInfo[4].period = 50;
     schedInfo[4].enable = 1;
-    schedInfo[4].task_function = led_blink;
+    schedInfo[4].task_function = button_handler;
     schedInfo[4].params = (void*)&global_system_state;
 
 
-    //* Shifted tasks
-    //? Uart transmitting
-    schedInfo[5].counter = 5;
+    //? Uart Transmit (all the messages at once)
+    schedInfo[5].counter = 30;
     schedInfo[5].period = 50;
     schedInfo[5].enable = 1;
     schedInfo[5].task_function = uart_sending;
     schedInfo[5].params = (void*)&global_system_state;
 
 
-    //? Accelerometer & Magnetometer
-    schedInfo[6].counter = 15;
-    schedInfo[6].period = 50;
+    // //? Led blinking
+    schedInfo[6].counter = 0;
+    schedInfo[6].period = 250;
     schedInfo[6].enable = 1;
-    schedInfo[6].task_function = accel_mag_read;
+    schedInfo[6].task_function = led_blink;
     schedInfo[6].params = (void*)&global_system_state;
 
 
-    // //? Magnetometer
-    // schedInfo[7].counter = 25;
-    // schedInfo[7].period = 50;
-    // schedInfo[7].enable = 1;
-    // schedInfo[7].task_function = magnetometer;
-    // schedInfo[7].params = (void*)&global_system_state;
-
-
     //? Button debounce
-    schedInfo[7].counter = 40;
-    schedInfo[7].period = 50;
+    schedInfo[7].counter = 0;
+    schedInfo[7].period = 500;
     schedInfo[7].enable = 1;
-    schedInfo[7].task_function = button_handler;
+    schedInfo[7].task_function = battery_read;
     schedInfo[7].params = (void*)&global_system_state;
 }
 
@@ -592,6 +585,7 @@ int main(void) {
     port_setup();
     library_setup();
     task_setup();
+    
 
     while(1){
         scheduler_run(schedInfo);

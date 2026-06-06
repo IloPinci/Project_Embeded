@@ -1,0 +1,38 @@
+[
+{
+  "directory": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default",
+  "command": "c:\\PROGRA~1\\MICROC~1\\xc16\\v2.10\\bin\\xc16-gcc.exe -DXPRJ_default=default -D__DEBUG -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../../../libraries\" -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../..\" -x c -g -mcpu=33EP512MU810 -O0 -msmart-io=1 -Wall -msfr-warn=off -mdfp=C:/Users/boli/.mchp_packs/Microchip/dsPIC33E-GM-GP-MC-GU-MU_DFP/1.6.297/xc16 -o CMakeFiles\\Final_Project_default_default_XC16_compile.dir\\C_\\Users\\boli\\Desktop\\Embedded_Systems\\Project_Embeded\\libraries\\adc.c.o -c \"C:\\Users\\boli\\Desktop\\Embedded Systems\\Project_Embeded\\libraries\\adc.c\"",
+  "file": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/libraries/adc.c",
+  "output": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/libraries/adc.c.o"
+},
+{
+  "directory": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default",
+  "command": "c:\\PROGRA~1\\MICROC~1\\xc16\\v2.10\\bin\\xc16-gcc.exe -DXPRJ_default=default -D__DEBUG -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../../../libraries\" -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../..\" -x c -g -mcpu=33EP512MU810 -O0 -msmart-io=1 -Wall -msfr-warn=off -mdfp=C:/Users/boli/.mchp_packs/Microchip/dsPIC33E-GM-GP-MC-GU-MU_DFP/1.6.297/xc16 -o CMakeFiles\\Final_Project_default_default_XC16_compile.dir\\C_\\Users\\boli\\Desktop\\Embedded_Systems\\Project_Embeded\\libraries\\pwm.c.o -c \"C:\\Users\\boli\\Desktop\\Embedded Systems\\Project_Embeded\\libraries\\pwm.c\"",
+  "file": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/libraries/pwm.c",
+  "output": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/libraries/pwm.c.o"
+},
+{
+  "directory": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default",
+  "command": "c:\\PROGRA~1\\MICROC~1\\xc16\\v2.10\\bin\\xc16-gcc.exe -DXPRJ_default=default -D__DEBUG -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../../../libraries\" -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../..\" -x c -g -mcpu=33EP512MU810 -O0 -msmart-io=1 -Wall -msfr-warn=off -mdfp=C:/Users/boli/.mchp_packs/Microchip/dsPIC33E-GM-GP-MC-GU-MU_DFP/1.6.297/xc16 -o CMakeFiles\\Final_Project_default_default_XC16_compile.dir\\C_\\Users\\boli\\Desktop\\Embedded_Systems\\Project_Embeded\\libraries\\spi.c.o -c \"C:\\Users\\boli\\Desktop\\Embedded Systems\\Project_Embeded\\libraries\\spi.c\"",
+  "file": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/libraries/spi.c",
+  "output": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/libraries/spi.c.o"
+},
+{
+  "directory": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default",
+  "command": "c:\\PROGRA~1\\MICROC~1\\xc16\\v2.10\\bin\\xc16-gcc.exe -DXPRJ_default=default -D__DEBUG -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../../../libraries\" -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../..\" -x c -g -mcpu=33EP512MU810 -O0 -msmart-io=1 -Wall -msfr-warn=off -mdfp=C:/Users/boli/.mchp_packs/Microchip/dsPIC33E-GM-GP-MC-GU-MU_DFP/1.6.297/xc16 -o CMakeFiles\\Final_Project_default_default_XC16_compile.dir\\C_\\Users\\boli\\Desktop\\Embedded_Systems\\Project_Embeded\\libraries\\timer.c.o -c \"C:\\Users\\boli\\Desktop\\Embedded Systems\\Project_Embeded\\libraries\\timer.c\"",
+  "file": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/libraries/timer.c",
+  "output": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/libraries/timer.c.o"
+},
+{
+  "directory": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default",
+  "command": "c:\\PROGRA~1\\MICROC~1\\xc16\\v2.10\\bin\\xc16-gcc.exe -DXPRJ_default=default -D__DEBUG -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../../../libraries\" -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../..\" -x c -g -mcpu=33EP512MU810 -O0 -msmart-io=1 -Wall -msfr-warn=off -mdfp=C:/Users/boli/.mchp_packs/Microchip/dsPIC33E-GM-GP-MC-GU-MU_DFP/1.6.297/xc16 -o CMakeFiles\\Final_Project_default_default_XC16_compile.dir\\C_\\Users\\boli\\Desktop\\Embedded_Systems\\Project_Embeded\\libraries\\uart.c.o -c \"C:\\Users\\boli\\Desktop\\Embedded Systems\\Project_Embeded\\libraries\\uart.c\"",
+  "file": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/libraries/uart.c",
+  "output": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/libraries/uart.c.o"
+},
+{
+  "directory": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default",
+  "command": "c:\\PROGRA~1\\MICROC~1\\xc16\\v2.10\\bin\\xc16-gcc.exe -DXPRJ_default=default -D__DEBUG -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../../../libraries\" -I\"C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/../../..\" -x c -g -mcpu=33EP512MU810 -O0 -msmart-io=1 -Wall -msfr-warn=off -mdfp=C:/Users/boli/.mchp_packs/Microchip/dsPIC33E-GM-GP-MC-GU-MU_DFP/1.6.297/xc16 -o CMakeFiles\\Final_Project_default_default_XC16_compile.dir\\C_\\Users\\boli\\Desktop\\Embedded_Systems\\Project_Embeded\\Final_Project.X\\project_main.c.o -c \"C:\\Users\\boli\\Desktop\\Embedded Systems\\Project_Embeded\\Final_Project.X\\project_main.c\"",
+  "file": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/project_main.c",
+  "output": "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/Final_Project.X/project_main.c.o"
+}
+]
