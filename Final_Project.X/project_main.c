@@ -19,6 +19,7 @@
 
 #define Max_Tasks 9
 #define ir_threshold 30
+#define CTRL_DT 0.002f   // 500 Hz control loop -> 2 ms per tick
 
 //! CONSTANTS FOR OBSTACLE AVOIDANCE STATE MACHINE------
 // to put them in the "general" library
@@ -43,7 +44,7 @@ typedef struct{
     int  state;                 // Sub-state
     int  two_sec_counter;       // Two seconds counter for the movement after rotation
     int  rep;                   // After three rep goes in HALT state
-    double obstacle_yaw;        // Store current yaw
+    float swept;                // Integrated turn angle in degrees
 }Obs_avoid; 
 
 // AS SIMETTI SUGGESTED, PUT SPEED AND YAWRATE IN A STRUCT
@@ -97,7 +98,8 @@ shared_data global_system_state = {0};
 extern Circular_Buffer receive_buffer;
 extern Circular_Buffer transmit_buffer;
 
-// ------ OBSTACLE AVOIDANCE HELPER FUNCTION--------
+/* ------ OBSTACLE AVOIDANCE HELPER FUNCTION--------
+we can remove it now bc it is unused
 // to put in the "general" library
 // Compute yaw difference
 double angle_diff(double a, double b) {
@@ -107,17 +109,14 @@ double angle_diff(double a, double b) {
     while (diff < -180.0f) diff += 360.0f;
     return diff;
 }
-
-//------------------------------------------------------
+------------------------------------------------------*/
 
 //! Setups
 void port_setup(){
     //! Disable analog inputs 
     ANSELA = ANSELB = ANSELC = ANSELD = ANSELE = ANSELG = 0x0000;
-    // enable AN5 and AN11 (the ir and the battery)
-    ANSELBbits.ANSB5  = 1;  
-    ANSELBbits.ANSB11 = 1;
 
+    // removed the adc bits setup, since they are stup inside adc_setup()
 
     // lights
     TRISAbits.TRISA0 = 0;   // LED1 output
@@ -174,9 +173,6 @@ void library_setup(){
     mag_setup(); 
     pwm_setup_all();   
     adc_setup();
-    
-    // we use scan mode so both the battery and the IR ca be read in a non blocking way
-    //adc_scan_setup(BIT10);    // battery
 }
 
 
@@ -360,50 +356,48 @@ void pwm_control(void* param){
             break;
 
         case AVOID:
-            // INIT -> ROT_CLOCKWISE 
+            // INIT -> start clockwise rotation
             if (sd->obs_avoid_var.state == INIT) {
-                sd->obs_avoid_var.obstacle_yaw = sd->yaw;   // Store current yaw
+                sd->obs_avoid_var.swept = 0.0f;          // reset integrated angle
                 sd->obs_avoid_var.state = ROT_CLOCKWISE;
-                pwm_move(0, -50);    // Start rotating clockwise
+                pwm_move(0, -50);                         // rotate clockwise
             }
 
-            // Sub-state: ROT_CLOCKWISE 
-            // Wait until ~90 degrees have been swept
+            // ROT_CLOCKWISE: integrate gyro z until 90 deg swept
             if (sd->obs_avoid_var.state == ROT_CLOCKWISE) {
-                if (fabs(angle_diff(sd->yaw, sd->obs_avoid_var.obstacle_yaw)) >= 90.0) {
+                GyroData g = gyro_read();
+                sd->obs_avoid_var.swept += g.z * CTRL_DT; // deg/s * s = deg
+                if (fabs(sd->obs_avoid_var.swept) >= 90.0f) {
                     sd->obs_avoid_var.state = MOVE_FORWARD;
                     sd->obs_avoid_var.two_sec_counter = 0;
-                    pwm_move(10, 0);     // Move forward at low speed
+                    pwm_move(10, 0);                      // forward at low speed
                 }
             }
 
-            // Sub-state: MOVE_FORWARD
-            // pwm_update called at 500 Hz -> 2 s = 1000 ticks
+            // MOVE_FORWARD: 2 s at 500 Hz = 1000 ticks
             if (sd->obs_avoid_var.state == MOVE_FORWARD) {
                 if (++sd->obs_avoid_var.two_sec_counter >= 1000) {
                     sd->obs_avoid_var.state = ROT_COUNTERCLOCKWISE;
-                    sd->obs_avoid_var.obstacle_yaw = sd->yaw;   // Store current yaw
-                    pwm_move(0, 50);     // Start rotating anticlockwise
+                    sd->obs_avoid_var.swept = 0.0f;       // reset for the return turn
+                    pwm_move(0, 50);                      // rotate anticlockwise
                 }
             }
 
-            // Sub-state: ROT_COUNTERCLOCKWISEs
-            // Return to the previous heading (~90 deg back)
+            // ROT_COUNTERCLOCKWISE: integrate gyro z until ~90 deg back
             if (sd->obs_avoid_var.state == ROT_COUNTERCLOCKWISE) {
-                if (fabs(angle_diff(sd->yaw, sd->obs_avoid_var.obstacle_yaw)) >= 90.0) {
+                GyroData g = gyro_read();
+                sd->obs_avoid_var.swept += g.z * CTRL_DT;
+                if (fabs(sd->obs_avoid_var.swept) >= 90.0f) {
                     pwm_stop_all();
                     sd->obs_avoid_var.state = INIT;
 
                     if (sd->ir_distance <= ir_threshold) {
-                        // Obstacle still there: try again or give up
                         sd->obs_avoid_var.rep++;
                         if (sd->obs_avoid_var.rep >= 3) {
                             sd->obs_avoid_var.rep = 0;
                             sd->current_car_state = HALT;
                         }
-                        // else: loop back — next call will re-enter INIT
                     } else {
-                        // Clear path: go back to MOVE
                         sd->obs_avoid_var.rep = 0;
                         sd->current_car_state = MOVE;
                     }

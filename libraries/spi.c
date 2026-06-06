@@ -114,7 +114,7 @@ void mag_setup(void) {
     LATDbits.LATD6 = 1;          
 }
 
-// Reads data from the accelerometer and computes to g and computes roll and pitch angles
+// Reads data from the accelerometer and computes to result and computes roll and pitch angles
 AccelData accel_read() {
 
     AccelData result;
@@ -143,7 +143,7 @@ AccelData accel_read() {
 
     LATBbits.LATB3 = 1;             // deselect        
 
-    // Convert raw counts to g
+    // Convert raw counts to result
     result.axis_x = (float)ax * 0.00098;
     result.axis_y = (float)ay * 0.00098;
     result.axis_z = (float)az * 0.00098;
@@ -191,6 +191,35 @@ MagData mag_read() {
     result.axis_y = (float) ay;
     result.axis_z = (float) az;
 
+    return result;
+}
+/*  optional
+void gyro_setup(void){
+    LATBbits.LATB4 = 0;          // select gyro (CS2 / RB4)
+    spi_write(0x0F & 0x7F);      // range register, write
+    spi_write(0x00);            // 0x00 -> +-2000 deg/s
+    LATBbits.LATB4 = 1;          // deselect
+}
+*/
+
+GyroData gyro_read(void){
+    GyroData result;
+    uint16_t lo, hi;
+    int16_t gx, gy, gz;
+
+    LATBbits.LATB4 = 0;          // select gyro
+    spi_write(0x02 | 0x80);      // rate data start, auto-increment, read flag
+
+    lo = spi_write(0x00); hi = spi_write(0x00); gx = (int16_t)((hi << 8) | lo);
+    lo = spi_write(0x00); hi = spi_write(0x00); gy = (int16_t)((hi << 8) | lo);
+    lo = spi_write(0x00); hi = spi_write(0x00); gz = (int16_t)((hi << 8) | lo);
+
+    LATBbits.LATB4 = 1;          // deselect
+
+    // +-2000 deg/s default range -> 16.4 LSB per deg/s -> 0.061 deg/s per LSB
+    result.x = gx * 0.061f;
+    result.y = gy * 0.061f;
+    result.z = gz * 0.061f;
     return result;
 }
 

@@ -32,6 +32,12 @@ typedef struct {
     float axis_y;
     float axis_z;
 } MagData;
+
+typedef struct {
+    float x;   // angular rate, deg/s
+    float y;
+    float z;
+} GyroData;
      
 // Sets up SPI configuration and configures pins
 void spi_setup();
@@ -44,11 +50,16 @@ void accel_bw(int bw);
 
 void mag_setup(void);
 
+// void gyro_setup(void);       optional
+
 // Reads accelerometer data and returns Sensor Datastruct
 AccelData accel_read();
 
 // Reads magnetometer data and returns Sensor Datastruct
 MagData mag_read();
+
+// Reads magnetometer data and returns Sensor Datastruct
+GyroData gyro_read(void);
 
 
 
