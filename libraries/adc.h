@@ -10,7 +10,7 @@
 #define BIT12 1
 
 #define BATTERY 11
-#define IR 5
+#define IR 14
 
 void adc_setup();
 

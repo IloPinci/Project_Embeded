@@ -1,14 +1,3 @@
-/* 
- * Group ID: 5
- * 
- * Board number: 14
- * 
- * Authors: 
- * Joel TOPULLI (8663382)
- * Edda Kulle (10217725)
- * Giacomo Nogarin (8654515)
- */
-
 #ifndef SPI_H
 #define	SPI_H
     
@@ -19,12 +8,12 @@
 #define MAG 3
     
 typedef struct {
-    float axis_x;
+    float axis_x;   
     float axis_y;
     float axis_z;
-    float roll;  // Computed roll angle in degrees
-    float pitch; // Computed pitch angle in degrees
-    float yaw;
+    float roll;     // Computed roll angle
+    float pitch;    // Computed pitch angle
+    float yaw;      // Computed yaw angle
 } AccelData;
 
 typedef struct {
@@ -34,29 +23,25 @@ typedef struct {
 } MagData;
 
 typedef struct {
-    float x;   // angular rate, deg/s
+    float x;
     float y;
     float z;
 } GyroData;
      
 // Sets up SPI configuration and configures pins
-void spi_setup();
+void spi_setup(void);
 
 // Sends byte over SPI and returns receives byte
 unsigned int spi_write(unsigned int data);
 
-// sets accellerometer bandwidth
-void accel_bw(int bw);
-
+// Setup the magnetometer
 void mag_setup(void);
 
-// void gyro_setup(void);       optional
-
 // Reads accelerometer data and returns Sensor Datastruct
-AccelData accel_read();
+AccelData accel_read(void);
 
 // Reads magnetometer data and returns Sensor Datastruct
-MagData mag_read();
+MagData mag_read(void);
 
 // Reads magnetometer data and returns Sensor Datastruct
 GyroData gyro_read(void);

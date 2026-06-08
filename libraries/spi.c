@@ -1,26 +1,15 @@
-/* 
- * Group ID: 5
- * 
- * Board number: 14
- * 
- * Authors: 
- * Joel TOPULLI (8663382)
- * Edda Kulle (10217725)
- * Giacomo Nogarin (8654515)
- */
-
 #include "xc.h"
 #include "spi.h"
 #include "uart.h"  
 #include <math.h>
 #include "timer.h"
 
-
+// Setup the SPI
 void spi_setup(void) {
 
     SPI1STATbits.SPIEN = 0;     // Disable SPI before changing configuration 
 
-    TRISAbits.TRISA1 = 1;      // RA1  / RPI17 - MISO (input)        
+    TRISAbits.TRISA1 = 1;       // RA1  / RPI17 - MISO (input)        
     TRISFbits.TRISF12 = 0;      // RF12 / RP108 - SCK  (output)
     TRISFbits.TRISF13 = 0;      // RF13 / RP109 - MOSI (output) 
 
@@ -58,35 +47,7 @@ unsigned int spi_write(unsigned int data) {
     return SPI1BUF;     // Return the data obtained from the slave
 }
 
-// Sets the accelerometer bandwidth filter with register 0x10
-// Valid values 8-15
-void accel_bw(int bw) {
-
-    LATBbits.LATB3 = 0;            // Assert CS, select accelerometer
-    spi_write(0x10 & 0x7F);        // Select the register and specify that we will write to it
-
-    switch (bw) {
-        case  8: spi_write(0x08); break;
-        case  9: spi_write(0x09); break;
-        case 10: spi_write(0x0A); break;
-        case 11: spi_write(0x0B); break;
-        case 12: spi_write(0x0C); break;
-        case 13: spi_write(0x0D); break;
-        case 14: spi_write(0x0E); break;
-        case 15: spi_write(0x0F); break;
-        default:
-            // If a number which is out of bounds is received, send error to uart
-            LATBbits.LATB3 = 1;
-            uart_transmit("$ERR,1*");
-            return;
-    }
-
-    LATBbits.LATB3 = 1;     //deselect when write is complete
-}
-
-
 // Sets up the magnetometer to go from sleep-mode to normal mode
-// Not needed in this assignment, just for future usability
 void mag_setup(void) {
 
     // Make sure other SPI devices are deselected
@@ -109,7 +70,7 @@ void mag_setup(void) {
     LATDbits.LATD6 = 0;          
 
     spi_write(0x4C & 0x7F);      
-    spi_write(0x00);    // normal mode
+    spi_write(0x00);    // Normal mode
 
     LATDbits.LATD6 = 1;          
 }
@@ -121,36 +82,36 @@ AccelData accel_read() {
     uint16_t LSB_part, MSB_part;
     int16_t ax, ay, az;
 
-    LATBbits.LATB3 = 0;             // select accelerometer
+    LATBbits.LATB3 = 0;             // Select accelerometer
     spi_write(0x02 | 0x80);         // Starting register 0x02 with read flag set 
     
     // Auto-incrementing reads 
     // Combine LSB and MSB, then logical right-shift by 4 to get complete value
-    // x axis
+    // X axis
     LSB_part = spi_write(0x00); 
     MSB_part = spi_write(0x00); 
     ax = ((int16_t)((MSB_part << 8) | LSB_part)) >> 4;
 
-    // y axis
+    // Y axis
     LSB_part = spi_write(0x00); 
     MSB_part = spi_write(0x00); 
     ay = ((int16_t)((MSB_part << 8) | LSB_part)) >> 4;
 
-    // z axis
+    // Z axis
     LSB_part = spi_write(0x00); 
     MSB_part = spi_write(0x00); 
     az = ((int16_t)((MSB_part << 8) | LSB_part)) >> 4;
 
-    LATBbits.LATB3 = 1;             // deselect        
+    LATBbits.LATB3 = 1;         // Deselect        
 
     // Convert raw counts to result
-    result.axis_x = (float)ax * 0.00098;
-    result.axis_y = (float)ay * 0.00098;
-    result.axis_z = (float)az * 0.00098;
+    result.axis_x = (float) ax * 0.00098;
+    result.axis_y = (float) ay * 0.00098;
+    result.axis_z = (float) az * 0.00098;
     
 
-    //roll  = atan2(ay, az) - rotation around X axis
-    //pitch = atan2(-ax, sqrt(ay^2+az^2)) - rotation around Y axis
+    //Roll  = atan2(ay, az) - rotation around X axis
+    //Pitch = atan2(-ax, sqrt(ay^2+az^2)) - rotation around Y axis
     //atan2 returns radians -> multiply by 180/Pi for degrees
     result.roll  = atan2f(result.axis_y, result.axis_z ) * (180.0 / PI);
     result.pitch = atan2f(-result.axis_x, sqrtf(result.axis_y * result.axis_y + result.axis_z  * result.axis_z )) * (180.0 / PI);
@@ -158,34 +119,32 @@ AccelData accel_read() {
     return result;
 }
 
-// Read from Magnetometer (Not needed for this Exercise but for later modularity)
+// Read data from magnetometer
 MagData mag_read() {
 
     MagData result;
     uint16_t LSB_part, MSB_part;
     int16_t ax, ay, az;
 
-    // read from the magnetometer starting at register 0x42
-    // CS3 (RD6) is the magnetometer chip select
-    LATDbits.LATD6 = 0;            // Assert CS3 - select magnetometer
-    spi_write(0x42 | 0x80);        // Address byte, read flag set 
+    LATDbits.LATD6 = 0;            // Select magnetometer
+    spi_write(0x42 | 0x80);        // Starting register 0x42 with read flag set 
 
-    // x axis
+    // X axis
     LSB_part = spi_write(0x00) & 0xF8; 
     MSB_part = spi_write(0x00);
     ax = ((int16_t)((MSB_part << 8) | LSB_part)) >> 3;
 
-    // y axis
+    // Y axis
     LSB_part = spi_write(0x00) & 0xF8;
     MSB_part = spi_write(0x00);
     ay = ((int16_t)((MSB_part << 8) | LSB_part)) >> 3;
 
-    // z axis
+    // Z axis
     LSB_part = spi_write(0x00) & 0xFE; 
     MSB_part = spi_write(0x00);
     az = ((int16_t)((MSB_part << 8) | LSB_part)) >> 1;
 
-    LATDbits.LATD6 = 1;
+    LATDbits.LATD6 = 1;     // deselect
     
     result.axis_x = (float) ax;
     result.axis_y = (float) ay;
@@ -193,33 +152,26 @@ MagData mag_read() {
 
     return result;
 }
-/*  optional
-void gyro_setup(void){
-    LATBbits.LATB4 = 0;          // select gyro (CS2 / RB4)
-    spi_write(0x0F & 0x7F);      // range register, write
-    spi_write(0x00);            // 0x00 -> +-2000 deg/s
-    LATBbits.LATB4 = 1;          // deselect
-}
-*/
 
 GyroData gyro_read(void){
+
     GyroData result;
     uint16_t lo, hi;
     int16_t gx, gy, gz;
 
-    LATBbits.LATB4 = 0;          // select gyro
-    spi_write(0x02 | 0x80);      // rate data start, auto-increment, read flag
+    LATBbits.LATB4 = 0;          // Select gyroscope
+    spi_write(0x02 | 0x80);      // Rate data start, auto-increment, read flag set
 
     lo = spi_write(0x00); hi = spi_write(0x00); gx = (int16_t)((hi << 8) | lo);
     lo = spi_write(0x00); hi = spi_write(0x00); gy = (int16_t)((hi << 8) | lo);
     lo = spi_write(0x00); hi = spi_write(0x00); gz = (int16_t)((hi << 8) | lo);
 
-    LATBbits.LATB4 = 1;          // deselect
+    LATBbits.LATB4 = 1;          // Deselect
 
     // +-2000 deg/s default range -> 16.4 LSB per deg/s -> 0.061 deg/s per LSB
     result.x = gx * 0.061f;
     result.y = gy * 0.061f;
     result.z = gz * 0.061f;
+
     return result;
 }
-
