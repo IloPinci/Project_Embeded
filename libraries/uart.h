@@ -21,10 +21,10 @@
 
 
 typedef struct{
-    volatile char *data;    //buffer array
-    volatile int head;      // write index  
-    volatile int tail;      // read index
-    int buf_size;     // buffer length
+    volatile char *data;    // Buffer array
+    volatile int head;      // Write index  
+    volatile int tail;      // Read index
+    int buf_size;           // Buffer length
 }Circular_Buffer;
 
 // Setup UART
@@ -44,5 +44,10 @@ int uart_receive_char(char *out);
 
 // Read one line
 int uart_receive_line(char *out, int max_len);
+
+// Number of bytes currently queued in the RX / TX buffers
+int uart_rx_count(void);
+
+int uart_tx_count(void);
 
 #endif

@@ -17,6 +17,7 @@
 #include "adc.h"
 #include "pwm.h"
 #include "scheduler.h"
+#include "data_types.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,74 +27,8 @@
 #define ir_threshold 30
 #define CTRL_DT 0.002f   // 500 Hz control loop -> 2 ms per tick
 
-//! CONSTANTS FOR OBSTACLE AVOIDANCE STATE MACHINE------
-// to put them in the "general" library
-#define INIT 0
-#define ROT_CLOCKWISE 1
-#define MOVE_FORWARD 2
-#define ROT_COUNTERCLOCKWISE 3
-//------------------------------------------------------
-
-//! Data structures
-
-// OBSTACLE AVOIDANCE STATE MACHINE STRUCT
-typedef struct{
-    int  state;                 // Sub-state
-    int  two_sec_counter;       // Two seconds counter for the movement after rotation
-    int  rep;                   // After three rep goes in HALT state
-    float swept;                // Integrated turn angle in degrees
-}Obs_avoid; 
-
-// AS SIMETTI SUGGESTED, PUT SPEED AND YAWRATE IN A STRUCT
-typedef struct{
-    int speed;
-    int yawRate;
-}pwm_variables; 
-
-// Finite state machine for the car
-typedef enum{
-    HALT = 0,
-    MOVE = 1,
-    AVOID = 2
-}car_state;
-
-// a data structure which is shared by the tasks
-typedef struct{
-    // ADC sensor readings
-    float battery_voltage;
-    float ir_distance;
-
-    // IMU
-    AccelData accel_data;
-    MagData mag_data;
-    float yaw;
-
-    // uart recieve
-    pwm_variables pwm;
-
-    // handling of buttons
-    volatile int button_1_original;     // RE8
-    volatile int button_2_original;     // RE9
-    int button1_confirmed;
-    int button2_confirmed;
-    int receive_size;
-    int transmit_size;
-
-    car_state current_car_state;
-
-    // NEW
-    Obs_avoid obs_avoid_var;
-
-    int led_toggle;
-    int adc_ready;
-}shared_data;
-
-TaskData schedInfo[Max_Tasks];
-shared_data global_system_state = {0};
-
-// here we get the buffer that is found in the uart.c so we don't have to declare it again
-extern Circular_Buffer receive_buffer;
-extern Circular_Buffer transmit_buffer;
+static volatile int button1_flag = 0;
+static volatile int button2_flag = 0;
 
 //! Setups
 void port_setup(){
@@ -147,11 +82,10 @@ void library_setup(){
     adc_setup();
 }
 
-
 //! Interrupts
 void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void) {
 
-    global_system_state.button_1_original = 1;
+    button1_flag = 1;
     
     // Clear the flag and disable the interrupt. The disabing is done to combat bounces. 
     // The interrupt enable is activated after 200ms which should be sufficient time to allow for it
@@ -161,12 +95,10 @@ void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void) {
 
 void __attribute__((interrupt, no_auto_psv)) _INT2Interrupt(void) {
 
-    global_system_state.button_2_original = 1;
+    button2_flag = 1;
     
-    // Find the amount of data as the difference 
-    global_system_state.receive_size = (receive_buffer.head + R_BUF_SIZE - receive_buffer.tail ) % R_BUF_SIZE;
-
-    global_system_state.transmit_size = (transmit_buffer.head + T_BUF_SIZE - transmit_buffer.tail ) % T_BUF_SIZE;
+    // The buffer sizes are now read by button_handler through uart_rx_count() /
+    // uart_tx_count(), so the ISR no longer reaches into uart.c's buffers.
 
     // Clear the flag and disable the interrupt. The disabing is done to combat bounces. 
     // The interrupt enable is activated after 200ms which should be sufficient time to allow for it
@@ -174,7 +106,8 @@ void __attribute__((interrupt, no_auto_psv)) _INT2Interrupt(void) {
     IEC1bits.INT2IE = 0;
 }
 
-//! Function
+//! Functions
+// Parser
 static int parser(const char *msg, int *speed, int *yawRate) {
 
     if (strncmp(msg, "$PCREF,", 7) != 0) return 0;
@@ -193,16 +126,75 @@ static int parser(const char *msg, int *speed, int *yawRate) {
     return 1;
 }
 
+// Obstacle avoidance state machine handler
+static void obstacle_avoidance_step(car_state *fsm, float *distance){
+
+    switch (fsm->avoid.state){
+
+        // INIT: start clockwise rotation
+        case INIT:
+            fsm->avoid.swept = 0.0f;                // Reset integrated angle
+            fsm->avoid.state = ROT_CLOCKWISE;
+            pwm_move(0, -70);                       // Rotate clockwise
+            break;
+
+        // ROT_CLOCKWISE: integrate gyro z until 90 deg swept
+        case ROT_CLOCKWISE: {
+            GyroData g = gyro_read();
+            fsm->avoid.swept += g.axis_z * CTRL_DT; // deg/s * s = deg
+            if (fabsf(fsm->avoid.swept) >= 90.0f) {
+                fsm->avoid.state = MOVE_FORWARD;
+                fsm->avoid.two_sec_counter = 0;
+                pwm_move(50, 0);                    // Forward at low speed
+            }
+            break;
+        }
+
+        // MOVE_FORWARD: 2 s at 500 Hz = 1000 ticks
+        case MOVE_FORWARD:
+            if (++fsm->avoid.two_sec_counter >= 1000) {
+                fsm->avoid.state = ROT_COUNTERCLOCKWISE;
+                fsm->avoid.swept = 0.0f;            // Reset for the return turn
+                pwm_move(0, 70);                    // Rotate anticlockwise
+            }
+            break;
+
+        // ROT_COUNTERCLOCKWISE: integrate gyro z until 90 deg back
+        case ROT_COUNTERCLOCKWISE: {
+            GyroData g = gyro_read();
+            fsm->avoid.swept += g.axis_z * CTRL_DT;
+            if (fabsf(fsm->avoid.swept) >= 90.0f) {
+                pwm_stop_all();
+                fsm->avoid.state = INIT;
+
+                // We restart the obstacle avoidance execution for a maximum of three times in a row
+                if (*distance <= ir_threshold) {
+                    fsm->avoid.rep++;
+                    // After the third time the car moves to HALT state
+                    if (fsm->avoid.rep >= 3) {
+                        fsm->avoid.rep = 0;
+                        fsm->state = HALT;
+                    }
+                } else {
+                    // If no obstacle is detected, move back to MOVE state
+                    fsm->avoid.rep = 0;
+                    fsm->state = MOVE;
+                }
+            }
+            break;
+        }
+    }
+}
 //! Tasks
 
 // Handles all LEDs blink
 void led_blink(void* param){
 
-    shared_data *sd = (shared_data *) param; 
+    car_state *fsm = (car_state *) param; 
 
     LATAbits.LATA0 =  !LATAbits.LATA0;          // Always blink the DSP led 
 
-   switch (sd->current_car_state){
+   switch (fsm->state){
         case HALT:
             LATBbits.LATB8 = !LATBbits.LATB8;   // Left side blink 
             LATFbits.LATF1 = LATBbits.LATB8;    // Right side blink
@@ -232,33 +224,34 @@ void led_blink(void* param){
 // Send required values to UART
 void uart_sending(void* param){
 
-    shared_data *sd = (shared_data *) param;
-    char buffer[32];
+    uart_send *ctx = (uart_send *) param;
+    static int batt_div = 0;    // counts entries to divide 10 Hz down to 1 Hz for battery
+    char buffer[48];            // wide enough for the worst-case $MANGLE
 
     // IR
-    sprintf(buffer, "$MDIST,%d*\n", (int)(sd->ir_distance + 0.5f));
+    sprintf(buffer, "$MDIST,%d*\n", (int)(*ctx->distance + 0.5f));
     uart_transmit(buffer);
 
     // Magnetometer
     sprintf(buffer, "$MANGLE,%.2f,%.2f,%.2f*\n",
-         sd->accel_data.roll, 
-         sd->accel_data.pitch, 
-         sd->yaw);
+         ctx->accel->roll, 
+         ctx->accel->pitch, 
+         ctx->accel->yaw);
     uart_transmit(buffer);
 
     // Every 1 hz we transmit what we have read. We enter uart_sending every 50 loops.
     // We want to send the the voltage every 500 loops. So we have to send it if we enter in the uart_sending 10 times
-    if (++sd->led_toggle % 10 == 0){
-        sprintf(buffer, "$MBATT,%.2f*\n", sd->battery_voltage);
+    if (++batt_div % 10 == 0){
+        sprintf(buffer, "$MBATT,%.2f*\n", *ctx->battery);
         uart_transmit(buffer);
-        sd->led_toggle = 0;
+        batt_div = 0;
     }
 }
 
 // Read IR value
 void ir_read(void* param){
     
-    shared_data *sd = (shared_data *) param;
+    distance_sensing *ctx = (distance_sensing *) param;
     
     float raw_ir_data = adc_read(IR);       // Read IR from channel 14
     
@@ -272,22 +265,22 @@ void ir_read(void* param){
                          - 1.60f * voltage * voltage * voltage
                          + 0.24f * voltage * voltage * voltage * voltage);
 
-    sd->ir_distance = converted_distance;
+    *ctx->distance = converted_distance;
 
     // Handle all the car states according to the distance threshold
     if (converted_distance <= ir_threshold){
-        if(sd->current_car_state == MOVE){
-            sd->current_car_state = AVOID;
-        } else if(sd->current_car_state == AVOID && sd->obs_avoid_var.state == MOVE_FORWARD){
-            sd->current_car_state = HALT;
+        if(ctx->fsm->state == MOVE){
+            ctx->fsm->state = AVOID;
+        } else if(ctx->fsm->state == AVOID && ctx->fsm->avoid.state == MOVE_FORWARD){
+            ctx->fsm->state = HALT;
         }
     }     
 }
 
-// Read
+// Read battery level
 void battery_read(void* param){
 
-    shared_data *sd = (shared_data *) param;
+    float *battery = (float *) param;
     
     float raw_bat_data = adc_read(BATTERY);       // Read battery from channel 11
 
@@ -297,79 +290,31 @@ void battery_read(void* param){
     // Convert voltage divider value to actual battery value
     float result = 3 * voltage;
 
-    sd->battery_voltage = result; 
+    *battery = result; 
 }
 
 // PWM control: handles the car movement for all the states
 void pwm_control(void* param){
 
-    shared_data *sd = (shared_data *) param;
-    switch (sd->current_car_state){
+    pwm_ctrl *ctx = (pwm_ctrl *) param;
+    switch (ctx->fsm->state){
         case HALT:
             pwm_stop_all();     // Stop all the motors
 
             // Reset obstacle avoidance variables 
-            sd->obs_avoid_var.state = INIT;
-            sd->obs_avoid_var.rep = 0;
-            sd->obs_avoid_var.two_sec_counter = 0;        
+            ctx->fsm->avoid.state = INIT;
+            ctx->fsm->avoid.rep = 0;
+            ctx->fsm->avoid.two_sec_counter = 0;        
             break;
 
         case MOVE:
             // Move the buggy according to the speed and yaw_rate values received by UART
-            pwm_move(sd->pwm.speed,sd->pwm.yawRate);
+            pwm_move(ctx->pwm->speed, ctx->pwm->yawRate);
             break;
 
         case AVOID:
-            // INIT: start clockwise rotation
-            if (sd->obs_avoid_var.state == INIT) {
-                sd->obs_avoid_var.swept = 0.0f;             // Reset integrated angle
-                sd->obs_avoid_var.state = ROT_CLOCKWISE;
-                pwm_move(0, -70);                           // Rotate clockwise
-            }
-
-            // ROT_CLOCKWISE: integrate gyro z until 90 deg swept
-            if (sd->obs_avoid_var.state == ROT_CLOCKWISE) {
-                GyroData g = gyro_read();
-                sd->obs_avoid_var.swept += g.axis_z * CTRL_DT;   // deg/s * s = deg
-                if (fabs(sd->obs_avoid_var.swept) >= 90.0f) {
-                    sd->obs_avoid_var.state = MOVE_FORWARD;
-                    sd->obs_avoid_var.two_sec_counter = 0;
-                    pwm_move(50, 0);                        // Forward at low speed
-                }
-            }
-
-            // MOVE_FORWARD: 2 s at 500 Hz = 1000 ticks
-            if (sd->obs_avoid_var.state == MOVE_FORWARD) {
-                if (++sd->obs_avoid_var.two_sec_counter >= 1000) {
-                    sd->obs_avoid_var.state = ROT_COUNTERCLOCKWISE;
-                    sd->obs_avoid_var.swept = 0.0f;       // Reset for the return turn
-                    pwm_move(0, 70);                      // Rotate anticlockwise
-                }
-            }
-
-            // ROT_COUNTERCLOCKWISE: integrate gyro z until 90 deg back
-            if (sd->obs_avoid_var.state == ROT_COUNTERCLOCKWISE) {
-                GyroData g = gyro_read();
-                sd->obs_avoid_var.swept += g.axis_z * CTRL_DT;
-                if (fabs(sd->obs_avoid_var.swept) >= 90.0f) {
-                    pwm_stop_all();
-                    sd->obs_avoid_var.state = INIT;
-
-                    // We restart the obstacle avoidance execution for a maximum of three times in a row
-                    if (sd->ir_distance <= ir_threshold) {
-                        sd->obs_avoid_var.rep++;
-                        // After the third time the car moves to HALT state
-                        if (sd->obs_avoid_var.rep >= 3) {
-                            sd->obs_avoid_var.rep = 0;
-                            sd->current_car_state = HALT;
-                        }
-                    } else {
-                        // If no obstacle is detected, move back to MOVE state
-                        sd->obs_avoid_var.rep = 0;
-                        sd->current_car_state = MOVE;
-                    }
-                }
-            }
+            // The avoidance manoeuvre lives in its own helper (see above)
+            obstacle_avoidance_step(ctx->fsm, ctx->distance);
             break;
 
         default:
@@ -380,7 +325,7 @@ void pwm_control(void* param){
 // Parser
 void parse_uart(void* param){
 
-    shared_data *sd = (shared_data *) param;
+    pwm_variables *pwm = (pwm_variables *) param;
     char buffer[32];
 
     if (!uart_receive_line(buffer, sizeof(buffer))) return;
@@ -388,8 +333,8 @@ void parse_uart(void* param){
     int spd = 0, yaw = 0;
     if (parser(buffer, &spd, &yaw)) {
         if (spd >= -100 && spd <= 100 && yaw >= -100 && yaw <= 100){
-            sd->pwm.speed = spd;
-            sd->pwm.yawRate = yaw;
+            pwm->speed = spd;
+            pwm->yawRate = yaw;
         }
     }
 }
@@ -397,45 +342,47 @@ void parse_uart(void* param){
 // Handles the buttons
 void button_handler(void* param){
 
-    shared_data *sd = (shared_data *) param;
+    car_state *fsm = (car_state *) param;
+    static int button1_confirmed = 0;   // debounce counters: only this task uses them
+    static int button2_confirmed = 0;
 
     // Handle the buffer sizes
-    if (sd->button_2_original == 1){
+    if (button2_flag == 1){
         char buffer[32];
 
-        sprintf(buffer, "$MBUF,%d,%d*\n", sd->transmit_size, sd->receive_size);
+        sprintf(buffer, "$MBUF,%d,%d*\n", uart_tx_count(), uart_rx_count());
         uart_transmit(buffer);
 
-        sd->button_2_original = 0;
-        sd->button2_confirmed = 1;
+        button2_flag = 0;
+        button2_confirmed = 1;
     }
 
     // Handle the state transitions
-    if (sd->button_1_original == 1){
+    if (button1_flag == 1){
         
-        if(sd->current_car_state == HALT){
-            sd->current_car_state = MOVE;
+        if(fsm->state == HALT){
+            fsm->state = MOVE;
         }
         else{
-            sd->current_car_state = HALT;
+            fsm->state = HALT;
         }
 
-        sd->button_1_original = 0;
-        sd->button1_confirmed = 1;
+        button1_flag = 0;
+        button1_confirmed = 1;
     }
 
     // After 300ms the button can be pressed again in order to avoid bounces
-    if (sd->button1_confirmed > 0) {
-        if(++sd->button1_confirmed >=3 ){
-            sd->button1_confirmed = 0;
+    if (button1_confirmed > 0) {
+        if(++button1_confirmed >=3 ){
+            button1_confirmed = 0;
             IFS1bits.INT1IF = 0;
             IEC1bits.INT1IE = 1;
         }
     }
 
-    if (sd->button2_confirmed > 0) {
-        if(++sd->button2_confirmed >=3){
-            sd->button2_confirmed = 0;
+    if (button2_confirmed > 0) {
+        if(++button2_confirmed >=3){
+            button2_confirmed = 0;
             IFS1bits.INT2IF = 0;
             IEC1bits.INT2IE = 1;
         }
@@ -445,21 +392,22 @@ void button_handler(void* param){
 // Read accelerometer and magnetometer values
 void accel_mag_read(void* param){
 
-    shared_data *sd = (shared_data *) param;
+    AccelData *accel = (AccelData *) param;
 
-    sd->accel_data = accel_read();
-    sd->mag_data = mag_read();
+    *accel = accel_read();
+    MagData mag = mag_read();   // only used inside this task -> plain local
 
     // Convert to radians for better calculation
-    float roll_rad  = sd->accel_data.roll  * (PI / 180.0f);
-    float pitch_rad = sd->accel_data.pitch * (PI / 180.0f);
+    float roll_rad  = accel->roll  * (PI / 180.0f);
+    float pitch_rad = accel->pitch * (PI / 180.0f);
 
     // Compute yaw value with tilt compensation
-    sd->yaw = yaw_compute(roll_rad, pitch_rad, sd->mag_data.axis_x, sd->mag_data.axis_y, sd->mag_data.axis_z);
+    accel->yaw = yaw_compute(roll_rad, pitch_rad, mag.axis_x, mag.axis_y, mag.axis_z);
 }
 
 //! TASK SETUP
-void task_setup(){
+void task_setup(TaskData schedInfo[], distance_sensing *ir_handle, pwm_ctrl *pwm_handle, uart_send *send_handle, 
+                pwm_variables *pwm, AccelData *accel, float *battery, car_state *fsm){
     /*
         period = 1   (2ms       = 500Hz)        
         period = 50  (100ms     = 10Hz)     
@@ -471,16 +419,16 @@ void task_setup(){
     schedInfo[0].period = 1;
     schedInfo[0].enable = 1;
     schedInfo[0].task_function = ir_read;
-    schedInfo[0].params = (void*)&global_system_state;
+    schedInfo[0].params = (void*)ir_handle;
 
     //? PWM control
     schedInfo[1].counter = 0;
     schedInfo[1].period = 1;
     schedInfo[1].enable = 1;
     schedInfo[1].task_function = pwm_control;
-    schedInfo[1].params = (void*)&global_system_state;
+    schedInfo[1].params = (void*)pwm_handle;
 
-    // We offset the tasks that have the same period so they don't run in the same tick. 
+    // Offset the tasks that have the same period so they don't run in the same tick. 
     // Also the sensors have a lower offset than the consumers so the data is updated.
 
     //? We parse the receiving messages 
@@ -488,50 +436,64 @@ void task_setup(){
     schedInfo[2].period = 50;
     schedInfo[2].enable = 1;
     schedInfo[2].task_function = parse_uart;
-    schedInfo[2].params = (void*)&global_system_state;
+    schedInfo[2].params = (void*)pwm;
 
     //? Accelerometer & Magnetometer
     schedInfo[3].counter = 10;
     schedInfo[3].period = 50;
     schedInfo[3].enable = 1;
     schedInfo[3].task_function = accel_mag_read;
-    schedInfo[3].params = (void*)&global_system_state;
+    schedInfo[3].params = (void*)accel;
 
     //? Button handler
     schedInfo[4].counter = 20;
     schedInfo[4].period = 50;
     schedInfo[4].enable = 1;
     schedInfo[4].task_function = button_handler;
-    schedInfo[4].params = (void*)&global_system_state;
+    schedInfo[4].params = (void*)fsm;
 
     //? Uart Transmit (all the messages at once)
     schedInfo[5].counter = 30;
     schedInfo[5].period = 50;
     schedInfo[5].enable = 1;
     schedInfo[5].task_function = uart_sending;
-    schedInfo[5].params = (void*)&global_system_state;
+    schedInfo[5].params = (void*)send_handle;
 
     // //? Led blinking
     schedInfo[6].counter = 0;
     schedInfo[6].period = 250;
     schedInfo[6].enable = 1;
     schedInfo[6].task_function = led_blink;
-    schedInfo[6].params = (void*)&global_system_state;
+    schedInfo[6].params = (void*)fsm;
 
-    //? Button debounce
+    //? Battery read
     schedInfo[7].counter = 0;
     schedInfo[7].period = 500;
     schedInfo[7].enable = 1;
     schedInfo[7].task_function = battery_read;
-    schedInfo[7].params = (void*)&global_system_state;
+    schedInfo[7].params = (void*)battery;
 }
 
 
 int main(void) {
 
+    // Data setups, updated through pointers
+    pwm_variables pwm = {0};
+    AccelData accel = {0};
+    float distance = 0;
+    float battery  = 0;
+    car_state fsm = {HALT, { INIT, 0, 0, 0.0f }};
+
+    // Per-task views: pointer bundles naming exactly what each task may touch
+    distance_sensing ir_handle = { &distance, &fsm };
+    pwm_ctrl pwm_handle = { &pwm, &distance, &fsm };
+    uart_send send_handle = { &distance, &accel, &battery };
+
+    TaskData schedInfo[Max_Tasks] = {0};    // Zero-init
+
     port_setup();
     library_setup();
-    task_setup();
+    task_setup(schedInfo, &ir_handle, &pwm_handle, &send_handle, &pwm, &accel, &battery, &fsm);
     
     while(1){
         scheduler_run(schedInfo);

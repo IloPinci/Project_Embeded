@@ -5,8 +5,8 @@ static volatile char receive_data [R_BUF_SIZE];
 static volatile char transmit_data[T_BUF_SIZE];
 
 // Initializing circular buffers
-Circular_Buffer receive_buffer  = {receive_data,  0, 0, R_BUF_SIZE};
-Circular_Buffer transmit_buffer = {transmit_data, 0, 0, T_BUF_SIZE};
+static Circular_Buffer receive_buffer  = {receive_data,  0, 0, R_BUF_SIZE};
+static Circular_Buffer transmit_buffer = {transmit_data, 0, 0, T_BUF_SIZE};
 
 // RX interrupt
 void __attribute__((interrupt, no_auto_psv)) _U1RXInterrupt(void) {
@@ -142,4 +142,13 @@ int uart_receive_line(char *out, int max_len) {
     }
 
     return 0;
+}
+
+// Bytes currently queued, computed from head/tail with wrap-around
+int uart_rx_count(void) {
+    return (receive_buffer.head + R_BUF_SIZE - receive_buffer.tail) % R_BUF_SIZE;
+}
+
+int uart_tx_count(void) {
+    return (transmit_buffer.head + T_BUF_SIZE - transmit_buffer.tail) % T_BUF_SIZE;
 }

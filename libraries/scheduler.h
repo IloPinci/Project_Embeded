@@ -1,8 +1,6 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
-#include <xc.h>
-
 #define Max_Tasks 8
 
 // What a task should have

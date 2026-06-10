@@ -1,4 +1,3 @@
-#include "xc.h"
 #include "scheduler.h"
 
 void scheduler_run(TaskData tasks[]){
