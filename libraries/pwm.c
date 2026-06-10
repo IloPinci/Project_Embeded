@@ -4,6 +4,18 @@
 
 void pwm_setup(int oc_select){
     
+    // Pins setup
+    TRISDbits.TRISD1 = 0;       // -Left PWM (VCPcon/RP65/RD1)
+    TRISDbits.TRISD2 = 0;       // Left PWM (DPH/RP66/RD2)
+    TRISDbits.TRISD3 = 0;       // -Right PWM (PMBE/RP67/RD3)
+    TRISDbits.TRISD4 = 0;       // Right PWM (PMWR/RP68/RD4)
+    
+    // Pin remapping
+    RPOR1bits.RP66R = 0b010000;     // Map left PWM to OC1
+    RPOR0bits.RP65R = 0b010001;     // Map -left PWM to OC2
+    RPOR2bits.RP68R = 0b010010;     // Map right PWM to OC3
+    RPOR1bits.RP67R = 0b010011;     // Map -right PWM to OC4
+    
     switch(oc_select){
         case 1:
             OC1CON1bits.OCM = 0;            // Disable before setup

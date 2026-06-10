@@ -23,29 +23,30 @@ typedef struct {
 } MagData;
 
 typedef struct {
-    float x;
-    float y;
-    float z;
+    float axis_x;
+    float axis_y;
+    float axis_z;
 } GyroData;
      
-// Sets up SPI configuration and configures pins
+// Setup SPI configuration and configures pins
 void spi_setup(void);
 
-// Sends byte over SPI and returns receives byte
+// Sends byte over SPI and returns received byte
 unsigned int spi_write(unsigned int data);
 
 // Setup the magnetometer
 void mag_setup(void);
 
-// Reads accelerometer data and returns Sensor Datastruct
+// Read accelerometer data and returns Sensor Datastruct
 AccelData accel_read(void);
 
-// Reads magnetometer data and returns Sensor Datastruct
+// Read magnetometer data and returns Sensor Datastruct
 MagData mag_read(void);
 
-// Reads magnetometer data and returns Sensor Datastruct
+// Read magnetometer data and returns Sensor Datastruct
 GyroData gyro_read(void);
 
-
+// Compute yaw with tilt compensation
+float yaw_compute(float roll, float pitch, float mag_x, float mag_y, float mag_z);
 
 #endif

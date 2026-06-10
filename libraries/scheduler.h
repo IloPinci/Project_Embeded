@@ -1,14 +1,9 @@
-#include "xc.h"
-#include "timer.h"
-#include "uart.h"
-#include "spi.h"
-#include "adc.h"
-#include "pwm.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
+#ifndef SCHEDULER_H
+#define SCHEDULER_H
 
-#define Max_Tasks 9
+#include <xc.h>
+
+#define Max_Tasks 8
 
 // What a task should have
 typedef struct{
@@ -19,8 +14,7 @@ typedef struct{
     void * params;
 }TaskData; 
 
-// Scheduler execution
+// Run the scheduler
 void scheduler_run(TaskData tasks[]);
 
-// Tasks setup
-void task_setup();
+#endif

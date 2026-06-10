@@ -12,10 +12,10 @@
 #define BATTERY 11
 #define IR 14
 
+// Setup the ADC
 void adc_setup();
 
+// Read from the desired channel
 double adc_read(int channel);
-
-double adc_scan_read(float *ch0, float *ch1);
 
 #endif

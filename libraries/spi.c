@@ -1,10 +1,9 @@
 #include "xc.h"
 #include "spi.h"
-#include "uart.h"  
-#include <math.h>
+#include "uart.h"
 #include "timer.h"
+#include <math.h>
 
-// Setup the SPI
 void spi_setup(void) {
 
     SPI1STATbits.SPIEN = 0;     // Disable SPI before changing configuration 
@@ -37,7 +36,6 @@ void spi_setup(void) {
     LATBbits.LATB3 = 1;         // Deselect accelerometer
 }
 
-// Does SPI Byte transfer
 unsigned int spi_write(unsigned int data) {
 
     while (SPI1STATbits.SPITBF == 1);  // Wait until TX buffer is free
@@ -47,7 +45,6 @@ unsigned int spi_write(unsigned int data) {
     return SPI1BUF;     // Return the data obtained from the slave
 }
 
-// Sets up the magnetometer to go from sleep-mode to normal mode
 void mag_setup(void) {
 
     // Make sure other SPI devices are deselected
@@ -75,15 +72,14 @@ void mag_setup(void) {
     LATDbits.LATD6 = 1;          
 }
 
-// Reads data from the accelerometer and computes to result and computes roll and pitch angles
 AccelData accel_read() {
 
     AccelData result;
     uint16_t LSB_part, MSB_part;
     int16_t ax, ay, az;
 
-    LATBbits.LATB3 = 0;             // Select accelerometer
-    spi_write(0x02 | 0x80);         // Starting register 0x02 with read flag set 
+    LATBbits.LATB3 = 0;         // Select accelerometer
+    spi_write(0x02 | 0x80);     // Starting register 0x02 with read flag set 
     
     // Auto-incrementing reads 
     // Combine LSB and MSB, then logical right-shift by 4 to get complete value
@@ -105,29 +101,28 @@ AccelData accel_read() {
     LATBbits.LATB3 = 1;         // Deselect        
 
     // Convert raw counts to result
-    result.axis_x = (float) ax * 0.00098;
-    result.axis_y = (float) ay * 0.00098;
-    result.axis_z = (float) az * 0.00098;
+    result.axis_x = (float) ax * 0.00098f;
+    result.axis_y = (float) ay * 0.00098f;
+    result.axis_z = (float) az * 0.00098f;
     
 
-    //Roll  = atan2(ay, az) - rotation around X axis
+    //Roll = atan2(ay, az) - rotation around X axis
     //Pitch = atan2(-ax, sqrt(ay^2+az^2)) - rotation around Y axis
     //atan2 returns radians -> multiply by 180/Pi for degrees
-    result.roll  = atan2f(result.axis_y, result.axis_z ) * (180.0 / PI);
-    result.pitch = atan2f(-result.axis_x, sqrtf(result.axis_y * result.axis_y + result.axis_z  * result.axis_z )) * (180.0 / PI);
+    result.roll  = atan2f(result.axis_y, result.axis_z ) * (180.0f / PI);
+    result.pitch = atan2f(-result.axis_x, sqrtf(result.axis_y * result.axis_y + result.axis_z  * result.axis_z )) * (180.0f / PI);
 
     return result;
 }
 
-// Read data from magnetometer
 MagData mag_read() {
 
     MagData result;
     uint16_t LSB_part, MSB_part;
     int16_t ax, ay, az;
 
-    LATDbits.LATD6 = 0;            // Select magnetometer
-    spi_write(0x42 | 0x80);        // Starting register 0x42 with read flag set 
+    LATDbits.LATD6 = 0;         // Select magnetometer
+    spi_write(0x42 | 0x80);     // Starting register 0x42 with read flag set 
 
     // X axis
     LSB_part = spi_write(0x00) & 0xF8; 
@@ -144,7 +139,7 @@ MagData mag_read() {
     MSB_part = spi_write(0x00);
     az = ((int16_t)((MSB_part << 8) | LSB_part)) >> 1;
 
-    LATDbits.LATD6 = 1;     // deselect
+    LATDbits.LATD6 = 1;         // Deselect
     
     result.axis_x = (float) ax;
     result.axis_y = (float) ay;
@@ -159,19 +154,42 @@ GyroData gyro_read(void){
     uint16_t lo, hi;
     int16_t gx, gy, gz;
 
-    LATBbits.LATB4 = 0;          // Select gyroscope
-    spi_write(0x02 | 0x80);      // Rate data start, auto-increment, read flag set
+    LATBbits.LATB4 = 0;         // Select gyroscope
+    spi_write(0x02 | 0x80);     // Starting register 0x02 with read flag set 
 
-    lo = spi_write(0x00); hi = spi_write(0x00); gx = (int16_t)((hi << 8) | lo);
-    lo = spi_write(0x00); hi = spi_write(0x00); gy = (int16_t)((hi << 8) | lo);
-    lo = spi_write(0x00); hi = spi_write(0x00); gz = (int16_t)((hi << 8) | lo);
+    // X axis
+    lo = spi_write(0x00); 
+    hi = spi_write(0x00); 
+    gx = (int16_t)((hi << 8) | lo);
+    
+    // Y axis
+    lo = spi_write(0x00); 
+    hi = spi_write(0x00); 
+    gy = (int16_t)((hi << 8) | lo);
+    
+    // Z axis
+    lo = spi_write(0x00); 
+    hi = spi_write(0x00); 
+    gz = (int16_t)((hi << 8) | lo);
 
-    LATBbits.LATB4 = 1;          // Deselect
+    LATBbits.LATB4 = 1;         // Deselect
 
     // +-2000 deg/s default range -> 16.4 LSB per deg/s -> 0.061 deg/s per LSB
-    result.x = gx * 0.061f;
-    result.y = gy * 0.061f;
-    result.z = gz * 0.061f;
+    result.axis_x = gx * 0.061f;
+    result.axis_y = gy * 0.061f;
+    result.axis_z = gz * 0.061f;
 
     return result;
+}
+
+float yaw_compute(float roll, float pitch, float mag_x, float mag_y, float mag_z) {
+
+    float x = mag_x * cosf(pitch) 
+            + mag_y * sinf(roll) * sinf(pitch) 
+            + mag_z * cosf(roll) * sinf(pitch);
+
+    float y = mag_y * cosf(roll) 
+            - mag_z * sinf(roll);
+
+    return atan2f(-y, x) * (180.0f / PI);
 }

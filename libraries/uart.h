@@ -1,19 +1,8 @@
-/* 
- * Group ID: 5
- * 
- * Board number: 14
- * 
- * Authors: 
- * Joel TOPULLI (8663382)
- * Edda Kulle (10217725)
- * Giacomo Nogarin (8654515)
- */
-
 #ifndef UART_H
 #define UART_H
 
 #define R_BUF_SIZE  64
-#define PI  3.14159265358979323846
+#define PI  3.14159265358979323846f
 /*
  * Allows the user to send up to 9 commands since they are 7bytes each.
  * We chose this value just for extreme test cases. However even 16 is an acceptable number
@@ -38,25 +27,22 @@ typedef struct{
     int buf_size;     // buffer length
 }Circular_Buffer;
 
-// initialize uart 
+// Setup UART
 void uart_setup();
 
-// add char to buffer
-int cb_produce(Circular_Buffer *cb, char c);
-
-// get char from buffer
-int cb_consume(Circular_Buffer *cb, char *out);
-
-// send string over uart
+// Send string over UART
 void uart_transmit(const char* message);
 
-// read received char
+// Add char to buffer
+int cb_produce(Circular_Buffer *cb, char c);
+
+// Get char from buffer
+int cb_consume(Circular_Buffer *cb, char *out);
+
+// Read received char
 int uart_receive_char(char *out);
 
-// change frequency according to input
-int uart_frequency_change(int value, int current);
-
-// reads one line
+// Read one line
 int uart_receive_line(char *out, int max_len);
 
 #endif

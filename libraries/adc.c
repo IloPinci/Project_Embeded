@@ -5,7 +5,7 @@
 void adc_setup(){
     
     // Pins setup
-    ANSELBbits.ANSB14 = 1;      // Turn on analog mode for pin RB14 (AN14, IR sensor - mikrobus 2)
+    ANSELBbits.ANSB14 = 1;      // Turn on analog mode for pin RB14 (AN14, IR sensor on mikrobus 2)
     ANSELBbits.ANSB11 = 1;      // Turn on analog mode for pin RB11 (AN11, BAT_VSENSE)
 
     TRISBbits.TRISB14 = 1;      // AN14 input
@@ -16,7 +16,7 @@ void adc_setup(){
     // ADC1 setup
     AD1CON1bits.ADON = 0;       // Turn ADC off
     
-    AD1CON1bits.AD12B = 0;      // Select 10/12-bits mode
+    AD1CON1bits.AD12B = 0;      // Select 10-bits mode
     AD1CON3bits.ADCS = 8;       // Clock prescaler to 8 for 10-bit Tad
 
     // Manual sampling - automatic conversion mode
@@ -31,11 +31,9 @@ void adc_setup(){
     AD1CON1bits.ADON = 1;       // Turn ADC on
 }
 
-
-// ADC1 read
 double adc_read(int channel){
 
-    AD1CHS0bits.CH0SA = channel;    // Set the channel we want to read from
+    AD1CHS0bits.CH0SA = channel;    // Set the channel to read from
     
     AD1CON1bits.DONE = 0;           // Put DONE = 0 to prevent sampling issues
     AD1CON1bits.SAMP = 1;           // Start sampling
@@ -43,21 +41,4 @@ double adc_read(int channel){
     while (!AD1CON1bits.DONE);      // Wait for conversion
 
     return ADC1BUF0;                // Return result
-}
-
-// reads latest scan results from the two buffers
-// ADC fills BUF0 = first scanned channel (AN5), BUF1 = second (AN11)
-double adc_scan_read(float *ch0, float *ch1) {
-    
-    // we check if it is ready or not. If it isn't we skip we don't busy wait
-    if (!AD1CON1bits.DONE){
-        return 0;
-    }     
-
-    AD1CON1bits.DONE = 0;           // we clear the done 
-
-    *ch0 = ADC1BUF0;                // IR sensor data
-    *ch1 = ADC1BUF1;                // battery data
-    
-    return 1;
 }
