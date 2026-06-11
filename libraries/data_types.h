@@ -3,6 +3,9 @@
 
 #include "spi.h"
 
+#define IR_THRESHOLD 30     // 30cm threshhold for obstacle detection
+#define CTRL_DT 0.002f      // 500 Hz control loop -> 2 ms per tick
+
 // Structs
 typedef struct {
     int speed;
@@ -13,7 +16,7 @@ typedef enum {
     HALT = 0,
     MOVE = 1,
     AVOID = 2
-} car_state;                    // Car states
+} car_state_enum;                    // Car states
 
 typedef enum {
     INIT = 0,
@@ -30,7 +33,7 @@ typedef struct {
 } obs_avoid;                    // Obstacle avoidance FSM
 
 typedef struct {
-    car_state state;
+    car_state_enum state;
     obs_avoid avoid;
 } car_state;                // Overall car and obstacle avoidance states
 
