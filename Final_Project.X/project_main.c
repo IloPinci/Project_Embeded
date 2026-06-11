@@ -27,9 +27,6 @@
 #define ir_threshold 30
 #define CTRL_DT 0.002f   // 500 Hz control loop -> 2 ms per tick
 
-static volatile int button1_flag = 0;
-static volatile int button2_flag = 0;
-
 //! Setups
 void port_setup(){
     
@@ -51,26 +48,9 @@ void port_setup(){
     LATGbits.LATG1 = 0;     
     LATAbits.LATA7 = 0;     
 
-
     // Buttons
     TRISEbits.TRISE8 = 1;   // Button 1 input
     TRISEbits.TRISE9 = 1;   // Button 2 input
-
-    // ISRs for the buttons
-    INTCON2bits.INT1EP = 1; 
-    INTCON2bits.INT2EP = 1;
-
-    // Route RPI88 and RPI89 to the interrupts
-    RPINR0bits.INT1R = 0x58;
-    RPINR1bits.INT2R = 0x59;
-
-    // Clear the flags
-    IFS1bits.INT1IF = 0;
-    IFS1bits.INT2IF = 0;
-    
-    // Enable the interrupts
-    IEC1bits.INT1IE = 1;
-    IEC1bits.INT2IE = 1;
 }
 
 void library_setup(){
@@ -80,30 +60,6 @@ void library_setup(){
     mag_setup(); 
     pwm_setup_all();   
     adc_setup();
-}
-
-//! Interrupts
-void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void) {
-
-    button1_flag = 1;
-    
-    // Clear the flag and disable the interrupt. The disabing is done to combat bounces. 
-    // The interrupt enable is activated after 200ms which should be sufficient time to allow for it
-    IFS1bits.INT1IF = 0; 
-    IEC1bits.INT1IE = 0;
-}
-
-void __attribute__((interrupt, no_auto_psv)) _INT2Interrupt(void) {
-
-    button2_flag = 1;
-    
-    // The buffer sizes are now read by button_handler through uart_rx_count() /
-    // uart_tx_count(), so the ISR no longer reaches into uart.c's buffers.
-
-    // Clear the flag and disable the interrupt. The disabing is done to combat bounces. 
-    // The interrupt enable is activated after 200ms which should be sufficient time to allow for it
-    IFS1bits.INT2IF = 0; 
-    IEC1bits.INT2IE = 0;
 }
 
 //! Functions
@@ -343,50 +299,27 @@ void parse_uart(void* param){
 void button_handler(void* param){
 
     car_state *fsm = (car_state *) param;
-    static int button1_confirmed = 0;   // debounce counters: only this task uses them
-    static int button2_confirmed = 0;
 
-    // Handle the buffer sizes
-    if (button2_flag == 1){
+    static int re8_prev = 1;
+    static int re9_prev = 1;
+
+    // Current value of the buttons
+    int re8_now = PORTEbits.RE8;
+    int re9_now = PORTEbits.RE9;
+
+    // Chenge car state only when button is pressed
+    if (re8_prev == 1 && re8_now == 0) {
+        fsm->state = (fsm->state == HALT) ? MOVE : HALT;
+    }
+    re8_prev = re8_now;
+
+    // Send to UART only when button is pressed 
+    if (re9_prev == 1 && re9_now == 0) {
         char buffer[32];
-
         sprintf(buffer, "$MBUF,%d,%d*\n", uart_tx_count(), uart_rx_count());
         uart_transmit(buffer);
-
-        button2_flag = 0;
-        button2_confirmed = 1;
     }
-
-    // Handle the state transitions
-    if (button1_flag == 1){
-        
-        if(fsm->state == HALT){
-            fsm->state = MOVE;
-        }
-        else{
-            fsm->state = HALT;
-        }
-
-        button1_flag = 0;
-        button1_confirmed = 1;
-    }
-
-    // After 300ms the button can be pressed again in order to avoid bounces
-    if (button1_confirmed > 0) {
-        if(++button1_confirmed >=3 ){
-            button1_confirmed = 0;
-            IFS1bits.INT1IF = 0;
-            IEC1bits.INT1IE = 1;
-        }
-    }
-
-    if (button2_confirmed > 0) {
-        if(++button2_confirmed >=3){
-            button2_confirmed = 0;
-            IFS1bits.INT2IF = 0;
-            IEC1bits.INT2IE = 1;
-        }
-    }
+    re9_prev = re9_now;
 }
 
 // Read accelerometer and magnetometer values
