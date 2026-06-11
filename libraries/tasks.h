@@ -9,13 +9,7 @@
 #include "spi.h"
 #include "scheduler.h"
 
-
-//! Functions
-// Parser
-static int parser(const char *msg, int *speed, int *yawRate);
-
-// Obstacle avoidance state machine handler
-static void obstacle_avoidance_step(car_state *fsm, float *distance);
+//TODO ISRs?
 
 // Handles all LEDs blink
 void led_blink(void* param);

@@ -9,6 +9,10 @@
       <itemPath>../libraries/spi.h</itemPath>
       <itemPath>../libraries/uart.h</itemPath>
       <itemPath>../libraries/timer.h</itemPath>
+      <itemPath>../libraries/data_types.h</itemPath>
+      <itemPath>../libraries/scheduler.h</itemPath>
+      <itemPath>../libraries/tasks.h</itemPath>
+      <itemPath>../libraries/system.h</itemPath>
     </logicalFolder>
     <logicalFolder name="ExternalFiles"
                    displayName="Important Files"
@@ -28,6 +32,9 @@
       <itemPath>../libraries/spi.c</itemPath>
       <itemPath>../libraries/uart.c</itemPath>
       <itemPath>../libraries/timer.c</itemPath>
+      <itemPath>../libraries/scheduler.c</itemPath>
+      <itemPath>../libraries/tasks.c</itemPath>
+      <itemPath>../libraries/system.c</itemPath>
     </logicalFolder>
   </logicalFolder>
   <sourceRootList>
