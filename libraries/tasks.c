@@ -8,8 +8,9 @@
 #include "adc.h"
 #include "spi.h"
 
-static volatile int button1_flag = 0;
-static volatile int button2_flag = 0;
+//TODO delete if button interrupt works
+/*static volatile int button1_flag = 0;
+static volatile int button2_flag = 0;*/
 
 // Helper functions and state machine logic
 
@@ -93,7 +94,8 @@ static void obstacle_avoidance_step(car_state *fsm, float *distance){
     }
 }
 
-//ISRs
+//TODO remove if it works
+/*/ISRs
 //! Interrupts
 void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void) {
 
@@ -116,7 +118,7 @@ void __attribute__((interrupt, no_auto_psv)) _INT2Interrupt(void) {
     // The interrupt enable is activated after 200ms which should be sufficient time to allow for it
     IFS1bits.INT2IF = 0; 
     IEC1bits.INT2IE = 0;
-}
+}*/
 
 //! Tasks
 
@@ -272,7 +274,8 @@ void parse_uart(void* param){
     }
 }
 
-// Handles the buttons
+//TODO delete if it works
+/*// Handles the buttons
 void button_handler(void* param){
 
     car_state *fsm = (car_state *) param;
@@ -320,6 +323,33 @@ void button_handler(void* param){
             IEC1bits.INT2IE = 1;
         }
     }
+}*/
+
+// Handles the buttons
+void button_handler(void* param){
+
+    car_state *fsm = (car_state *) param;
+
+    static int re8_prev = 1;
+    static int re9_prev = 1;
+
+    // Current value of the buttons
+    int re8_now = PORTEbits.RE8;
+    int re9_now = PORTEbits.RE9;
+
+    // Chenge car state only when button is pressed
+    if (re8_prev == 1 && re8_now == 0) {
+        fsm->state = (fsm->state == HALT) ? MOVE : HALT;
+    }
+    re8_prev = re8_now;
+
+    // Send to UART only when button is pressed 
+    if (re9_prev == 1 && re9_now == 0) {
+        char buffer[32];
+        sprintf(buffer, "$MBUF,%d,%d*\n", uart_tx_count(), uart_rx_count());
+        uart_transmit(buffer);
+    }
+    re9_prev = re9_now;
 }
 
 // Read accelerometer and magnetometer values

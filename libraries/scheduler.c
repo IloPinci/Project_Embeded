@@ -42,8 +42,8 @@ void task_setup(TaskData schedInfo[], distance_sensing *ir_handle, pwm_ctrl *pwm
     schedInfo[3].params = (void*)accel;
 
     //? Button handler
-    schedInfo[4].counter = 20;
-    schedInfo[4].period = 50;
+    schedInfo[4].counter = 5;
+    schedInfo[4].period = 10;
     schedInfo[4].enable = 1;
     schedInfo[4].task_function = button_handler;
     schedInfo[4].params = (void*)fsm;

@@ -33,7 +33,8 @@ void port_setup(){
     TRISEbits.TRISE8 = 1;   // Button 1 input
     TRISEbits.TRISE9 = 1;   // Button 2 input
 
-    // ISRs for the buttons
+    //TODO remove if it works
+    /*// ISRs for the buttons
     INTCON2bits.INT1EP = 1; 
     INTCON2bits.INT2EP = 1;
 
@@ -47,7 +48,7 @@ void port_setup(){
     
     // Enable the interrupts
     IEC1bits.INT1IE = 1;
-    IEC1bits.INT2IE = 1;
+    IEC1bits.INT2IE = 1;*/
 }
 
 void library_setup(){
