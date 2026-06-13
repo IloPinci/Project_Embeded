@@ -7,6 +7,7 @@
 #include "pwm.h"
 #include "adc.h"
 #include "spi.h"
+#include "parser.h"
 
 //TODO delete if button interrupt works
 /*static volatile int button1_flag = 0;
@@ -15,25 +16,6 @@ static volatile int button2_flag = 0;*/
 // Helper functions and state machine logic
 
 //! Functions
-// Parser
-static int parser(const char *msg, int *speed, int *yawRate) {
-
-    if (strncmp(msg, "$PCREF,", 7) != 0) return 0;
-
-    const char *ptr = msg + 7;
-    char *end;
-
-    int parsed_speed = (int)strtol(ptr, &end, 10);
-    if (*end != ',') return 0;
-
-    int parsed_yaw = (int)strtol(end + 1, &end, 10);
-    if (*end != '*') return 0;
-
-    *speed   = parsed_speed;
-    *yawRate = parsed_yaw;
-    return 1;
-}
-
 // Obstacle avoidance state machine handler
 static void obstacle_avoidance_step(car_state *fsm, float *distance){
 
@@ -75,8 +57,10 @@ static void obstacle_avoidance_step(car_state *fsm, float *distance){
                 pwm_stop_all();
                 fsm->avoid.state = INIT;
 
-                // We restart the obstacle avoidance execution for a maximum of three times in a row
-                if (*distance <= IR_THRESHOLD) {
+                // We restart the obstacle avoidance execution for a maximum of three times in a row 
+                if (*distance <= (IR_THRESHOLD + 5)) {
+                    //? we do a +10 cm here to compesate for the fact that when turning the robot does not turn fully 90 degrees. Thus it moves diagonally and it gets away from the target. This means that it will move forward just a bit and will get stuck in a infinite loop.
+
                     fsm->avoid.rep++;
                     // After the third time the car moves to HALT state
                     if (fsm->avoid.rep >= 3) {
@@ -261,15 +245,24 @@ void pwm_control(void* param){
 void parse_uart(void* param){
 
     pwm_variables *pwm = (pwm_variables *) param;
-    char buffer[32];
+    static parser_state pstate = { STATE_DOLLAR, {0}, {0}, 0, 0 };
+    char c;
 
-    if (!uart_receive_line(buffer, sizeof(buffer))) return;
+     while (uart_receive_char(&c)) {
 
-    int spd = 0, yaw = 0;
-    if (parser(buffer, &spd, &yaw)) {
-        if (spd >= -100 && spd <= 100 && yaw >= -100 && yaw <= 100){
-            pwm->speed = spd;
-            pwm->yawRate = yaw;
+        if (parse_byte(&pstate, c) == NEW_MESSAGE) {
+
+            if (strncmp(pstate.msg_type, "PCREF", 5) == 0) {
+
+                int spd = extract_integer(pstate.msg_payload);
+                int i   = next_value(pstate.msg_payload, 0);
+                int yaw = extract_integer(pstate.msg_payload + i);
+
+                if (spd >= -100 && spd <= 100 && yaw >= -100 && yaw <= 100) {
+                    pwm->speed   = spd;
+                    pwm->yawRate = yaw;
+                }
+            }
         }
     }
 }

@@ -3,7 +3,7 @@ set(CMAKE_HOST_SYSTEM_NAME "Windows")
 set(CMAKE_HOST_SYSTEM_VERSION "10.0.22631")
 set(CMAKE_HOST_SYSTEM_PROCESSOR "")
 
-include("C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default/.generated/toolchain.cmake")
+include("C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/cmake/Final_Project/default/.generated/toolchain.cmake")
 
 set(CMAKE_SYSTEM "Generic")
 set(CMAKE_SYSTEM_NAME "Generic")

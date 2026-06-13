@@ -28,7 +28,7 @@
 int main(void) {
 
     // Data setups, updated through pointers
-    pwm_variables pwm = {0};
+    pwm_variables pwm = {40, 0};    // we want to to move forward even if there isn't a command from the uart, so we can ust press the move button and it will go
     AccelData accel = {0};
     float distance = 0;
     float battery  = 0;

@@ -17,8 +17,12 @@ endforeach()
 
 set(Final_Project_default_default_XC16_FILE_TYPE_compile
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libraries/adc.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libraries/parser.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libraries/pwm.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libraries/scheduler.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libraries/spi.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libraries/system.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libraries/tasks.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libraries/timer.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libraries/uart.c"
     "${CMAKE_CURRENT_SOURCE_DIR}/../../../project_main.c")

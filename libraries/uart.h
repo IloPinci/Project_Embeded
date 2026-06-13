@@ -1,23 +1,25 @@
 #ifndef UART_H
 #define UART_H
 
-#define R_BUF_SIZE  64
+#define R_BUF_SIZE  128
 #define PI  3.14159265358979323846f
 /*
- * Allows the user to send up to 9 commands since they are 7bytes each.
- * We chose this value just for extreme test cases. However even 16 is an acceptable number
+    For the receive buffer we have to consider the frequency (we changed this from a period of 50 to a period of 5) that we empty it and the baud rate itself. We know that almost 115.2 bytes come every ms. And our parse UART fires every 10 ms which means that we need to save at least 116 bytes before the parse uart can drain it. 
+
+    But we want to make sure that everything is handled correctly, hence we need a bit more space in the case that some process takes more that it is required. Coming to the value: 128 which is a power of 2 but also allows enough free space. 
  */
 
-#define T_BUF_SIZE  64
+#define T_BUF_SIZE  128
 /*
- ACC transmits in total 26 bytes, in the worst case
- ANG transmits in total 19 bytes, in the worst case
- If we also want to debug and see the period misses we have to consider another 11 bytes at max
- If we also consider an Error which can come in an asynch way we have 7 more bytes
- 
- As a result at the worst case 26+19+11+7 = 63
- We use the size 64 bc it close to the theoretical maximum and is a power of 2. (helps with %)
- */
+    $MANGLE,%.2f,%.2f,%.2f*\n -> 34 bytes every 100 ms
+    $MDIST,%d*\n -> 13 bytes every 100 ms
+    $MBATT,%.2f*\n -> 14 bytes every 500ms
+    $MBUF,%d,%d*\n -> 16 bytes every 20 ms
+
+    34+13+14+16 = 77 characters (to transmit all data we need 7 ms if we round up)
+
+    Since the time to transmit all the data is less that the period of the tasks we need to worry only about the maximum we we have to send in one loop. Hence we need a buffer size which is larger than 77 characters. We can choose 80, however we would prefer 128 as it is a power of two which makes it easier for the head and the tail to wrap around it. It also has more space in case the sensor precision is turns to mm for the IR read. 
+*/
 
 
 typedef struct{

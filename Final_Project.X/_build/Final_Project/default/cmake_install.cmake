@@ -1,4 +1,4 @@
-# Install script for directory: C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/cmake/Final_Project/default
+# Install script for directory: C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/cmake/Final_Project/default
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -40,7 +40,7 @@ endif()
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
 if(CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/install_local_manifest.txt"
+  file(WRITE "C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/_build/Final_Project/default/install_local_manifest.txt"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()
 if(CMAKE_INSTALL_COMPONENT)
@@ -56,6 +56,6 @@ else()
 endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
-  file(WRITE "C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/${CMAKE_INSTALL_MANIFEST}"
+  file(WRITE "C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/_build/Final_Project/default/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")
 endif()

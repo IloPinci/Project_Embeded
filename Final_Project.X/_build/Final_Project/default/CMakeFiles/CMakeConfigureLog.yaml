@@ -144,7 +144,7 @@ events:
       Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
       
       The C compiler identification is GNU, found in:
-        C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/4.3.3/CompilerIdC/a.out
+        C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/4.3.3/CompilerIdC/a.out
       
   -
     kind: "find-v1"

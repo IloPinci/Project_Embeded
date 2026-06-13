@@ -28,8 +28,8 @@ void task_setup(TaskData schedInfo[], distance_sensing *ir_handle, pwm_ctrl *pwm
     // Also the sensors have a lower offset than the consumers so the data is updated.
 
     //? We parse the receiving messages 
-    schedInfo[2].counter = 0;
-    schedInfo[2].period = 50;
+    schedInfo[2].counter = 2;
+    schedInfo[2].period = 5;
     schedInfo[2].enable = 1;
     schedInfo[2].task_function = parse_uart;
     schedInfo[2].params = (void*)pwm;
