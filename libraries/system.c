@@ -32,23 +32,6 @@ void port_setup(){
     // Buttons
     TRISEbits.TRISE8 = 1;   // Button 1 input
     TRISEbits.TRISE9 = 1;   // Button 2 input
-
-    //TODO remove if it works
-    /*// ISRs for the buttons
-    INTCON2bits.INT1EP = 1; 
-    INTCON2bits.INT2EP = 1;
-
-    // Route RPI88 and RPI89 to the interrupts
-    RPINR0bits.INT1R = 0x58;
-    RPINR1bits.INT2R = 0x59;
-
-    // Clear the flags
-    IFS1bits.INT1IF = 0;
-    IFS1bits.INT2IF = 0;
-    
-    // Enable the interrupts
-    IEC1bits.INT1IE = 1;
-    IEC1bits.INT2IE = 1;*/
 }
 
 void library_setup(){

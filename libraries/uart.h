@@ -4,27 +4,28 @@
 #define R_BUF_SIZE  128
 #define PI  3.14159265358979323846f
 /*
-    For the receive buffer we have to consider the frequency (we changed this from a period of 50 to a period of 5) that we empty it and the baud rate itself. We know that almost 115.2 bytes come every ms. And our parse UART fires every 10 ms which means that we need to save at least 116 bytes before the parse uart can drain it. 
+    For the receive buffer we have to consider the frequency (we changed this from a period of 50 to a period of 5) that we empty it and the baud rate itself. We know that almost 11.52 bytes come every ms. And our parse UART fires every 10 ms which means that we need to save at least 116 bytes before the parse uart can drain it. 
 
     But we want to make sure that everything is handled correctly, hence we need a bit more space in the case that some process takes more that it is required. Coming to the value: 128 which is a power of 2 but also allows enough free space. 
  */
 
 #define T_BUF_SIZE  128
 /*
-    $MANGLE,%.2f,%.2f,%.2f*\n -> 34 bytes every 100 ms
-    $MDIST,%d*\n -> 13 bytes every 100 ms
-    $MBATT,%.2f*\n -> 14 bytes every 500ms
-    $MBUF,%d,%d*\n -> 16 bytes every 20 ms
+    $MANGLE,%.2f,%.2f,%.2f*\n -> 33 bytes every 100 ms
+    $MDIST,%d*\n -> 12 bytes every 100 ms
+    $MBATT,%.2f*\n -> 13 bytes every 500ms
+    $MBUF,%d,%d*\n -> 15 bytes every 100 ms
 
-    34+13+14+16 = 77 characters (to transmit all data we need 7 ms if we round up)
+    33+12+13+15 = 73 characters (to transmit all data we need 7 ms if we round up)
 
-    Since the time to transmit all the data is less that the period of the tasks we need to worry only about the maximum we we have to send in one loop. Hence we need a buffer size which is larger than 77 characters. We can choose 80, however we would prefer 128 as it is a power of two which makes it easier for the head and the tail to wrap around it. It also has more space in case the sensor precision is turns to mm for the IR read. 
+    Since the time to transmit all the data is less that the period of the tasks we need to worry only about the maximum we we have to send in one loop. Hence we need a buffer size which is larger than 73 characters. 
+    
+    !We can choose 80, however we would prefer 128 as it is a power of two which makes it easier for the head and the tail to wrap around it (in cpu cycles). It also has more space in case the sensor precision is turns to mm for the IR read. 
 */
-
 
 typedef struct{
     volatile char *data;    // Buffer array
-    volatile int head;      // Write index  
+    volatile int head;      // Write index (volatiole bc they are accessed by the uart ISR)
     volatile int tail;      // Read index
     int buf_size;           // Buffer length
 }Circular_Buffer;
@@ -43,9 +44,6 @@ int cb_consume(Circular_Buffer *cb, char *out);
 
 // Read received char
 int uart_receive_char(char *out);
-
-// Read one line
-int uart_receive_line(char *out, int max_len);
 
 // Number of bytes currently queued in the RX / TX buffers
 int uart_rx_count(void);

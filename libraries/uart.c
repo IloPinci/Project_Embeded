@@ -8,16 +8,16 @@ static volatile char transmit_data[T_BUF_SIZE];
 static Circular_Buffer receive_buffer  = {receive_data,  0, 0, R_BUF_SIZE};
 static Circular_Buffer transmit_buffer = {transmit_data, 0, 0, T_BUF_SIZE};
 
-// RX interrupt
+// RX interrupt which fires when a byte arrives
 void __attribute__((interrupt, no_auto_psv)) _U1RXInterrupt(void) {
     IFS0bits.U1RXIF = 0;  
 
-    while (U1STAbits.URXDA == 1) {
+    while (U1STAbits.URXDA == 1) {  // the while is to drain all of the bytes in the queue and not just one at a time
         cb_produce(&receive_buffer, U1RXREG);       // If full, drop the data
     }
 }
 
-// TX interrupt
+// TX interrupt that fires when the tx register is empty
 void __attribute__((interrupt, no_auto_psv)) _U1TXInterrupt(void) {
     IFS0bits.U1TXIF = 0;  
     char c;
@@ -27,7 +27,7 @@ void __attribute__((interrupt, no_auto_psv)) _U1TXInterrupt(void) {
     } else {
         // if the buffer is empty we disavle it until next transmit
         IEC0bits.U1TXIE = 0;    
-        // the disabling is done so we don't have a loop
+        // the disabling is done so we don't have a loop that executes forever
     }
 }
 
@@ -44,15 +44,15 @@ void uart_setup() {
     U1MODEbits.BRGH = 1;
     // a baud rate of 115200 allows to send 11.5 bytes/ms. Better than the 1 byte/ms of the 9600
     
-    U1BRG = 155;            
+    U1BRG = 155;                    //  if we want to change to the 9600 baud replace with 1874 bc 72000000 / (4 * 9600) - 1 = 1874
     
-    // Enable UART module and transmitter 
-    U1MODEbits.UARTEN = 1;
-    U1STAbits.UTXEN   = 1;
 
-    // Enable RX interrupt
-    IFS0bits.U1RXIF = 0;
-    IEC0bits.U1RXIE = 1;
+    U1MODEbits.UARTEN = 1;      // Enable UART module 
+    U1STAbits.UTXEN   = 1;      // enable transmitter 
+
+
+    IFS0bits.U1RXIF = 0;        // clear rx flag
+    IEC0bits.U1RXIE = 1;        // enable rx interrupt
 }
 
 void uart_transmit(const char *message) {
@@ -69,10 +69,11 @@ void uart_transmit(const char *message) {
 
     // Manually send the first byte to kick off the interrupt chain
     if (cb_consume(&transmit_buffer, &c)) {
-        IEC0bits.U1TXIE = 0;
-        U1TXREG = c;
+        IEC0bits.U1TXIE = 0;    // disable just to be 100% sure
+        U1TXREG = c;            // we sent the first byte manually
         IEC0bits.U1TXIE = 1;    // Enable the uart so the rest is sent by interrupt
     }
+    //? the uart irs fires only when the tx register becomes empty. So we send one byte to the register and enable the IRS. the byte is consumed -> the irs is called bc now the register is empty and the whole message is pulled from the buffer until it become empty agin and the irs is disabled
 }
 
 // Attempts to add byte to buffer, returns 1 if successful
@@ -101,47 +102,10 @@ int cb_consume(Circular_Buffer *cb, char *out) {
     return 1;
 }
 
+
 // Reads one character from the UART RX circular buffer into *out
 int uart_receive_char(char *out) {
     return cb_consume(&receive_buffer, out);
-}
-
-// Reads one complete "$...*" message from the buffer.
-// Call every scheduler tick. Returns 1 when a full message is ready, 0 otherwise.
-int uart_receive_line(char *out, int max_len) {
-    
-    // these are static bc we want to be able to follow the continuation of the message even in the next tick
-    static char buf[32];
-    static int  pos = 0;
-    static int  receiving = 0;
-    char c;
-
-    while (uart_receive_char(&c)) {
-
-        if (c == '$') {             // Message start
-            pos = 0;
-            receiving = 1;
-        }
-
-        if (receiving) {
-            buf[pos++] = c;
-
-            if (c == '*') {         // Message end
-                buf[pos] = '\0';
-                for (int i = 0; i <= pos; i++) out[i] = buf[i];
-                pos = 0;
-                receiving = 0;
-                return 1;
-            }
-
-            if (pos >= max_len) {   // Overflow protection
-                pos       = 0;
-                receiving = 0;
-            }
-        }
-    }
-
-    return 0;
 }
 
 // Bytes currently queued, computed from head/tail with wrap-around

@@ -8,11 +8,11 @@
 
 // What a task should have
 typedef struct{
-    int counter;
-    int period;      // period = heartbeat * period_multiplier
-    int enable;
-    void (*task_function) (void *);
-    void * params;
+    int counter;        // incremented every tick and reset to 0 when it reaches the vaue of the period
+    int period;         // period = heartbeat * period_multiplier
+    int enable;         // 0 skip 1 run
+    void (*task_function) (void *);     // the pointer of the function that the task calls 
+    void * params;      // the pointer of the data structures that the task will need to execute properly
 }TaskData; 
 
 

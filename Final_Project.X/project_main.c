@@ -27,23 +27,23 @@
 
 int main(void) {
 
-    // Data setups, updated through pointers
+    //! all the data that will need to be shared is declared as local variables in the stack
     pwm_variables pwm = {40, 0};    // we want to to move forward even if there isn't a command from the uart, so we can ust press the move button and it will go
     AccelData accel = {0};
     float distance = 0;
     float battery  = 0;
     car_state fsm = {HALT, { INIT, 0, 0, 0.0f }};
 
-    // Per-task views: pointer bundles naming exactly what each task may touch
+    //! structures that are made up from other data structs so we can pass to the tasks
     distance_sensing ir_handle = { &distance, &fsm };
     pwm_ctrl pwm_handle = { &pwm, &distance, &fsm };
     uart_send send_handle = { &distance, &accel, &battery };
 
-    TaskData schedInfo[Max_Tasks] = {0};    // Zero-init
+    TaskData schedInfo[Max_Tasks] = {0};    // we initialize to 0 the array that will be used by the scheduler (so the enable the period ect)
 
     port_setup();
     library_setup();
-    task_setup(schedInfo, &ir_handle, &pwm_handle, &send_handle, &pwm, &accel, &battery, &fsm);
+    task_setup(schedInfo, &ir_handle, &pwm_handle, &send_handle, &pwm, &accel, &battery, &fsm);     // we pass to each task the pointer to the data structure that it needs
     
     while(1){
         scheduler_run(schedInfo);

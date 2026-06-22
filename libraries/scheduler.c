@@ -5,8 +5,11 @@
 void task_setup(TaskData schedInfo[], distance_sensing *ir_handle, pwm_ctrl *pwm_handle, uart_send *send_handle, 
                 pwm_variables *pwm, AccelData *accel, float *battery, car_state *fsm){
     /*
-        period = 1   (2ms       = 500Hz)        
-        period = 50  (100ms     = 10Hz)     
+        period = 1   (2ms       = 500Hz)   
+        period = 5   (10ms      = 100Hz)   
+        period = 10  (20ms      = 50Hz)   
+        period = 50  (100ms     = 10Hz)   
+        period = 250 (500ms     = 2Hz)   
         period = 500 (1000ms    = 1Hz)
     */
 
@@ -79,7 +82,7 @@ void scheduler_run(TaskData tasks[]){
             continue;
         } 
 
-        if (++tasks[i].counter == tasks[i].period){
+        if (++tasks[i].counter == tasks[i].period){     // we update the counter and check
             tasks[i].task_function(tasks[i].params);    // Execute the task
             tasks[i].counter = 0;
         }

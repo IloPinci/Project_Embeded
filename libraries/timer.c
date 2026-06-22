@@ -6,19 +6,19 @@
 
 void tmr_setup_period(int timer, int ms){
     
-    // The value of the Fcy = 72MHz
+    // The value of the Fcy = 72MHz (peripheral clock)
     // To support up to 200ms a 1:256 prescaler is needed
     uint16_t pr = (Ticks_per_ms * ms);
 
     if (timer == TIMER1){
-        T1CONbits.TON = 0;      // Turn off the timer
+        T1CONbits.TON = 0;      // Turn off before configuring
         T1CONbits.TCS = 0;      // Specify Fcy as the clock source
         T1CONbits.TCKPS = 3;    // Define prescaler as 1:256
 
-        TMR1 = 0;               // Reset the timer 
-        IFS0bits.T1IF = 0;      // Reset the flag
+        TMR1 = 0;               // Reset the timer counter 
+        IFS0bits.T1IF = 0;      // Reset the intterrupt flag
         
-        PR1 = pr - 1;           // As it needs one cycle to see that it has reached the desired number
+        PR1 = pr - 1;           // We set the period register (it needs one cycle to see that it has reached the desired number that is why it is -1)
         T1CONbits.TON = 1;      // Start the timer
     }
     else if(timer == TIMER2){
@@ -52,7 +52,7 @@ int tmr_wait_period(int timer){
     if (timer == TIMER1){
         if(IFS0bits.T1IF == 1){
             IFS0bits.T1IF = 0;          // Clear the flag before exiting early
-            return 1;
+            return 1;                   // deadline miss which means that the flag was already set
         }
         while(IFS0bits.T1IF == 0);      // Busy waiting
         IFS0bits.T1IF = 0;              // Reset it (perhaps it is redundant)
@@ -76,7 +76,7 @@ int tmr_wait_period(int timer){
         IFS0bits.T3IF = 0;
     }
 
-    return 0;
+    return 0;           // arrived on time
 }
 
 

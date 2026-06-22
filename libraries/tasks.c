@@ -9,14 +9,9 @@
 #include "spi.h"
 #include "parser.h"
 
-//TODO delete if button interrupt works
-/*static volatile int button1_flag = 0;
-static volatile int button2_flag = 0;*/
 
-// Helper functions and state machine logic
-
-//! Functions
-// Obstacle avoidance state machine handler
+//! Helper functions
+// Obstacle avoidance state machine handler which only this script can access
 static void obstacle_avoidance_step(car_state *fsm, float *distance){
 
     switch (fsm->avoid.state){
@@ -40,7 +35,7 @@ static void obstacle_avoidance_step(car_state *fsm, float *distance){
             break;
         }
 
-        // MOVE_FORWARD: 2 s at 500 Hz = 1000 ticks
+        // MOVE_FORWARD: 2s at 500 Hz = 1000 ticks
         case MOVE_FORWARD:
             if (++fsm->avoid.two_sec_counter >= 1000) {
                 fsm->avoid.state = ROT_COUNTERCLOCKWISE;
@@ -59,7 +54,7 @@ static void obstacle_avoidance_step(car_state *fsm, float *distance){
 
                 // We restart the obstacle avoidance execution for a maximum of three times in a row 
                 if (*distance <= (IR_THRESHOLD + 5)) {
-                    //? we do a +10 cm here to compesate for the fact that when turning the robot does not turn fully 90 degrees. Thus it moves diagonally and it gets away from the target. This means that it will move forward just a bit and will get stuck in a infinite loop.
+                    //? we do a +5 cm here to compesate for the fact that when turning the robot does not turn fully 90 degrees. Thus it moves diagonally and it gets away from the target. This means that it will move forward just a bit and will get stuck in a infinite loop.
 
                     fsm->avoid.rep++;
                     // After the third time the car moves to HALT state
@@ -78,31 +73,6 @@ static void obstacle_avoidance_step(car_state *fsm, float *distance){
     }
 }
 
-//TODO remove if it works
-/*/ISRs
-//! Interrupts
-void __attribute__((interrupt, no_auto_psv)) _INT1Interrupt(void) {
-
-    button1_flag = 1;
-    
-    // Clear the flag and disable the interrupt. The disabing is done to combat bounces. 
-    // The interrupt enable is activated after 200ms which should be sufficient time to allow for it
-    IFS1bits.INT1IF = 0; 
-    IEC1bits.INT1IE = 0;
-}
-
-void __attribute__((interrupt, no_auto_psv)) _INT2Interrupt(void) {
-
-    button2_flag = 1;
-    
-    // The buffer sizes are now read by button_handler through uart_rx_count() /
-    // uart_tx_count(), so the ISR no longer reaches into uart.c's buffers.
-
-    // Clear the flag and disable the interrupt. The disabing is done to combat bounces. 
-    // The interrupt enable is activated after 200ms which should be sufficient time to allow for it
-    IFS1bits.INT2IF = 0; 
-    IEC1bits.INT2IE = 0;
-}*/
 
 //! Tasks
 
@@ -145,7 +115,7 @@ void uart_sending(void* param){
 
     uart_send *ctx = (uart_send *) param;
     static int batt_div = 0;    // counts entries to divide 10 Hz down to 1 Hz for battery
-    char buffer[48];            // wide enough for the worst-case $MANGLE
+    char buffer[48];            // wide enough for the worst case: $MANGLE
 
     // IR
     sprintf(buffer, "$MDIST,%d*\n", (int)(*ctx->distance + 0.5f));
@@ -232,7 +202,7 @@ void pwm_control(void* param){
             break;
 
         case AVOID:
-            // The avoidance manoeuvre lives in its own helper (see above)
+            // The avoidance manoeuvre is done on the helper
             obstacle_avoidance_step(ctx->fsm, ctx->distance);
             break;
 
@@ -257,7 +227,8 @@ void parse_uart(void* param){
                 int spd = extract_integer(pstate.msg_payload);
                 int i   = next_value(pstate.msg_payload, 0);
                 int yaw = extract_integer(pstate.msg_payload + i);
-
+                
+                // we choose to disregard values rather than cap them
                 if (spd >= -100 && spd <= 100 && yaw >= -100 && yaw <= 100) {
                     pwm->speed   = spd;
                     pwm->yawRate = yaw;
@@ -266,57 +237,6 @@ void parse_uart(void* param){
         }
     }
 }
-
-//TODO delete if it works
-/*// Handles the buttons
-void button_handler(void* param){
-
-    car_state *fsm = (car_state *) param;
-    static int button1_confirmed = 0;   // debounce counters: only this task uses them
-    static int button2_confirmed = 0;
-
-    // Handle the buffer sizes
-    if (button2_flag == 1){
-        char buffer[32];
-
-        sprintf(buffer, "$MBUF,%d,%d*\n", uart_tx_count(), uart_rx_count());
-        uart_transmit(buffer);
-
-        button2_flag = 0;
-        button2_confirmed = 1;
-    }
-
-    // Handle the state transitions
-    if (button1_flag == 1){
-        
-        if(fsm->state == HALT){
-            fsm->state = MOVE;
-        }
-        else{
-            fsm->state = HALT;
-        }
-
-        button1_flag = 0;
-        button1_confirmed = 1;
-    }
-
-    // After 300ms the button can be pressed again in order to avoid bounces
-    if (button1_confirmed > 0) {
-        if(++button1_confirmed >=3 ){
-            button1_confirmed = 0;
-            IFS1bits.INT1IF = 0;
-            IEC1bits.INT1IE = 1;
-        }
-    }
-
-    if (button2_confirmed > 0) {
-        if(++button2_confirmed >=3){
-            button2_confirmed = 0;
-            IFS1bits.INT2IF = 0;
-            IEC1bits.INT2IE = 1;
-        }
-    }
-}*/
 
 // Handles the buttons
 void button_handler(void* param){
@@ -336,7 +256,7 @@ void button_handler(void* param){
     }
     re8_prev = re8_now;
 
-    // Send to UART only when button is pressed 
+    // Send to UART only when button is pressed (edge detectiion)
     if (re9_prev == 1 && re9_now == 0) {
         char buffer[32];
         sprintf(buffer, "$MBUF,%d,%d*\n", uart_tx_count(), uart_rx_count());

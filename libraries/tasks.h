@@ -9,7 +9,7 @@
 #include "spi.h"
 #include "scheduler.h"
 
-//TODO ISRs?
+
 
 // Handles all LEDs blink
 void led_blink(void* param);

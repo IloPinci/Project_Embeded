@@ -1,41 +1,23 @@
 # ninja log v7
-30	554	8024375621664207	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/libraries/timer.c.o	c4d0398e9e5274c6
-17	575	8024375621548399	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/libraries/adc.c.o	2d0e7c44190f6a0b
-35	583	8024375621714461	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/libraries/uart.c.o	4b2b0311239e47eb
-18	313	8024389924357539	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/libraries/spi.c.o	4c5e0662c1d7b728
-23	601	8024375621580938	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/libraries/pwm.c.o	8cfa3c8a0694a8dd
-27	377	8024592917187903	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/Project_Embeded/Final_Project.X/project_main.c.o	b30b1c10ee05ed39
-378	916	8024592920697520	C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/out/Final_Project/default.elf	432d062db21ca9c1
-917	953	8024592926089586	CMakeFiles/Final_Project_default_Bin2Hex	e1c8203256b30f95
-917	953	8024592926089586	C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/out/Final_Project/default.hex	e1c8203256b30f95
-917	953	8024592926089586	C:/Users/boli/Desktop/Embedded Systems/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_Bin2Hex	e1c8203256b30f95
+727	762	8038287589765426	CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
 31	248	8030904833374475	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/parser.c.o	5a5f0d6606018925
-36	357	8030904833428900	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/scheduler.c.o	d5ef137eebd0b338
-52	366	8030904833584385	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/timer.c.o	2f49efd807a77ff7
-43	367	8030904833494410	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/system.c.o	775ad33917f5a969
+17	315	8038287140253829	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/scheduler.c.o	d5ef137eebd0b338
+89	1091	8038265004343839	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/timer.c.o	2f49efd807a77ff7
+20	312	8038287140283043	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/system.c.o	775ad33917f5a969
 26	371	8030904833324807	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/adc.c.o	78fc3dcedde623ff
-60	377	8030904833654799	CMakeFiles/Final_Project_default_default_XC16_compile.dir/7238d249d8be23cc3d5b27af53686f57/F/Project_Embeded/Final_Project.X/project_main.c.o	7204f70004b61cbc
-47	397	8030904833534384	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/tasks.c.o	a4371da22d842c38
-56	401	8030904833624796	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/uart.c.o	42c38feec778091e
-40	412	8030904833458908	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/spi.c.o	fc45e5d1b8b683db
+26	314	8038287140343105	CMakeFiles/Final_Project_default_default_XC16_compile.dir/7238d249d8be23cc3d5b27af53686f57/F/Project_Embeded/Final_Project.X/project_main.c.o	7204f70004b61cbc
+23	351	8038287140313449	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/tasks.c.o	a4371da22d842c38
+15	211	8038287582639936	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/uart.c.o	42c38feec778091e
+24	372	8038271088470499	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/spi.c.o	fc45e5d1b8b683db
 34	430	8030904833398841	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/pwm.c.o	3cd3f67f70391417
-430	1135	8030904837365520	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.elf	49d8adc4b400d211
-1135	1254	8030904844416019	CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
-1135	1254	8030904844416019	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.hex	c42af822bc1273b4
-1135	1254	8030904844416019	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
-18	313	8030910079899144	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/scheduler.c.o	d5ef137eebd0b338
-29	343	8030910080011035	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/tasks.c.o	a4371da22d842c38
-36	360	8030910080086515	CMakeFiles/Final_Project_default_default_XC16_compile.dir/7238d249d8be23cc3d5b27af53686f57/F/Project_Embeded/Final_Project.X/project_main.c.o	7204f70004b61cbc
-33	376	8030910080050950	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/uart.c.o	42c38feec778091e
-25	385	8030910079980941	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/system.c.o	775ad33917f5a969
-22	409	8030910079939124	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/spi.c.o	fc45e5d1b8b683db
-409	923	8030910083818117	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.elf	49d8adc4b400d211
-923	961	8030910088952471	CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
-923	961	8030910088952471	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.hex	c42af822bc1273b4
-923	961	8030910088952471	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
-19	253	8030924112581994	CMakeFiles/Final_Project_default_default_XC16_compile.dir/7238d249d8be23cc3d5b27af53686f57/F/Project_Embeded/Final_Project.X/project_main.c.o	7204f70004b61cbc
-15	273	8030924112541980	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/tasks.c.o	a4371da22d842c38
-273	778	8030924115130373	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.elf	49d8adc4b400d211
-778	813	8030924120174737	CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
-778	813	8030924120174737	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.hex	c42af822bc1273b4
-778	813	8030924120174737	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
+212	727	8038287584612536	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.elf	49d8adc4b400d211
+727	762	8038287589765426	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.hex	c42af822bc1273b4
+727	762	8038287589765426	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
+32	70	8038287609733182	CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
+32	70	8038287609733182	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.hex	c42af822bc1273b4
+32	70	8038287609733182	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
+15	258	8038290552987786	CMakeFiles/Final_Project_default_default_XC16_compile.dir/C_/Users/boli/Desktop/Embedded_Systems/F/Project_Embeded/libraries/uart.c.o	42c38feec778091e
+258	751	8038290555433487	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.elf	49d8adc4b400d211
+751	785	8038290560352059	CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
+751	785	8038290560352059	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/out/Final_Project/default.hex	c42af822bc1273b4
+751	785	8038290560352059	C:/Users/boli/Desktop/Embedded Systems/F/Project_Embeded/Final_Project.X/_build/Final_Project/default/CMakeFiles/Final_Project_default_Bin2Hex	c42af822bc1273b4
